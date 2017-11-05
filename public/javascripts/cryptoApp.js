@@ -93,6 +93,78 @@ Vue.component('secretKey',{
   }
 })
 
+function fakeEnc(text){
+  return text + ' enc***';
+}
+
+Vue.component('chatBoxEnc',{
+  props:['publicMsg','realTimeEncValue'],
+  template:`
+  <div class="chatBox">
+
+    <div class="msgArea">
+
+        <span v-for="i in publicMsg" :class="i.state">{{fakeEnc(i.msg)}}</span>
+
+    </div>
+
+    <div class="inputArea inputAreaEnc">
+        <textarea>{{realTimeEncValue}}</textarea>
+        <button>send</button>
+    </div>
+
+  </div>
+  `,
+  methods:{
+    fakeEnc:fakeEnc,
+  }
+})
+
+Vue.component('chatBox',{
+  props:['publicMsg'],
+  template:`
+  <div class="chatBox">
+
+    <div class="msgArea">
+
+        <span v-for="i in publicMsg" :class="i.state">{{i.msg}}</span>
+
+    </div>
+
+    <div class="inputArea">
+        <textarea @keyup.enter="sendMsg" @keyup="realTimeEnc"></textarea>
+        <button @click="sendMsg">send</button>
+    </div>
+
+  </div>
+  `,
+  methods:{
+    sendMsg: function(){
+
+      let yourTypedMsg = $('.inputArea textarea').val().trim();
+      if(!yourTypedMsg) return;
+
+      cryptoApp.publicMsg.push({msg:yourTypedMsg, state:'out'});
+      $('.inputArea textarea').val('')
+
+    },
+    realTimeEnc: function(){
+      let yourTypedMsg = $('.inputArea textarea').val().trim();
+      if(!yourTypedMsg) return;
+
+      cryptoApp.realTimeEncValue = fakeEnc(yourTypedMsg);
+
+  }
+}
+})
+
+Vue.component('fileArea',{
+  template:`
+  <div class="fileArea">
+  Drag files to here to send them...
+  </div>
+  `
+})
 let cryptoApp = new Vue({
   el:'#cryptoApp',
   data:{
@@ -106,8 +178,17 @@ let cryptoApp = new Vue({
       {id:0, name:'louay'},
       {id:1, name:'anas'},
       {id:2, name:'moied'},
+      
     ],
     username:'',
+
+    publicMsg:[
+      {msg:'hello',state:'in'},
+      {msg:'oh hi',state:'out'},
+      {msg:'how are you?',state:'in'},
+      {msg:'fine',state:'out'},
+    ],
+    realTimeEncValue:'',
 
   },
   template:`
@@ -117,6 +198,9 @@ let cryptoApp = new Vue({
     <div class="col-2-3">
       <cryptoInfo :cryptoType="cryptoType" :cryptoAlgo="cryptoAlgo" :cryptoKeySize="cryptoKeySize"></cryptoInfo>
       <secretKey :secretKey="secretKey"></secretKey>
+      <chatBox :publicMsg="publicMsg"></chatBox>
+      <chatBoxEnc :publicMsg="publicMsg" :realTimeEncValue="realTimeEncValue"></chatBoxEnc>
+      <fileArea></fileArea>
     </div>
   </div>
   `

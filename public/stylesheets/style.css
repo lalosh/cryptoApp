@@ -6,6 +6,8 @@
     display: block;
     width: 100%;
     margin: 10px 0;
+    overflow: auto;
+    max-height: 550px;
 }
 
 .person{
@@ -173,4 +175,87 @@ aside{
     width: 70%;
     display: inline-block;
     vertical-align: top;
+}
+
+
+.chatBox{
+    display: inline-block;
+    width: 49.5%;
+    height: 450px;
+    background-color: #f0eee8;
+    border: none;
+    border-radius: 3px;
+    margin-top: 10px;
+}
+
+.msgArea{
+    height: 80%;
+    overflow: auto;
+}
+
+.msgArea span{
+    clear: both;
+    padding: 4px;
+    border: none;
+    border-radius: 3px;
+    margin: 5px;
+    max-width: 85%;
+    word-wrap: break-word;
+}
+.out{
+    float: right;
+    background-color: #e2ff00;
+}
+.in{
+    float: left;
+    background-color: #1aaff4;
+}
+.inputArea{
+    height: 20%;
+    padding: 3px;
+}
+
+.inputArea textarea{
+    display: block;
+    width: 98%;
+    min-height: 10px;
+
+    border: none;
+    border-radius: 3px;
+    padding: 3px;
+    font-size: 17px;
+    margin: 5px auto;
+    letter-spacing: 1.1px;
+
+    overflow:auto;
+    resize: none;
+    outline: none;
+    white-space: nowrap;
+    word-wrap: break-word;
+}
+
+.inputArea button{
+    display: block;
+    width: 40%;
+    border: none;
+    border-radius: 3px;
+    padding: 3px;
+    font-size: 17px;
+    margin: 2px auto;
+    cursor: pointer;
+
+    background-color: #009b67;
+    color: white;
+}
+
+.fileArea{
+  width: 100%;
+  margin: auto;
+  padding: 15px;
+
+  border: none;
+  border-radius: 3px;
+  background-color: lightgreen;
+  margin-top: 10px;
+  text-align: center;
 }
