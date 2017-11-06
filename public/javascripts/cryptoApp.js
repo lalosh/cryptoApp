@@ -172,14 +172,14 @@ Vue.component('chatBox',{
 Vue.component('fileArea',{
 
   template:`
-  <div class="fileArea">
-  Drag files to here to send them...
+  <div class="fileArea" id="drop_zone" ondrop="drop_handler(event);" ondragover="dragover_handler(event);" ondragend="dragend_handler(event);">
+    <strong>Drag one or more files to this Drop Zone ...</strong>
   </div>
   `
 })
 
 
-let cryptoApp = new Vue({
+var cryptoApp = new Vue({
 
   el:'#cryptoApp',
 
@@ -238,6 +238,14 @@ let cryptoApp = new Vue({
 
       cryptoApp.realTimeMsg="";
 
+      //send real time
+      //io
+
+    },//sendMsg
+  },
+  watch:{
+    publicMsg: function(){
+
       setTimeout(function () {
         let a = document.querySelectorAll('.msgArea')[0];
         a.scrollTop = a.scrollHeight;
@@ -246,10 +254,18 @@ let cryptoApp = new Vue({
         b.scrollTop = b.scrollHeight;
       }, 0);
 
-      //send real time
-      //io
+    },
+    publicMsgEnc: function(){
 
-    }//sendMsg
+      setTimeout(function () {
+        let a = document.querySelectorAll('.msgArea')[0];
+        a.scrollTop = a.scrollHeight;
+
+        let b = document.querySelectorAll('.msgArea')[1];
+        b.scrollTop = b.scrollHeight;
+      }, 0);
+
+    }
   }
 })
 
