@@ -272,5 +272,8 @@ aside{
     word-wrap: break-word;
     margin-top: 5px;
     font-size: 17px;
-
+    border: none;
+    border-radius: 3px;
+    background-color: white;
+    min-height: 42px;
 }

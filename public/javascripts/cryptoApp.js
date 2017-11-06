@@ -1,7 +1,17 @@
 
+function fakeEnc(text){
+  if(text == "") return "";
+  return text + ' enc***';
+}
 
-Vue.component('loginForm',{
+function fakeDec(text){
+  return "dec*** "+text;
+}
+
+Vue.component('loginForm', {
+
   props:['username'],
+
   template:`
   <div v-if="!username" class="loginForm">
 
@@ -11,18 +21,24 @@ Vue.component('loginForm',{
   </div>
 
   <div class="loginForm" v-else>
+
     <p>Hello,{{username}}!  </p>
+
   </div>
   `,
+
   methods:{
     changeUserName: function(){
       cryptoApp.username = $('.loginForm :input').val();
     }
   }
-})
+
+});
 
 Vue.component('people',{
+
   props:['peopleArray'],
+
   template:`
   <div class="people">
 
@@ -35,9 +51,10 @@ Vue.component('people',{
   `
 })
 
-
 Vue.component('online',{
+
     props:['peopleArray','username'],
+
     template:`
     <aside>
       <loginForm :username='username'></loginForm>
@@ -47,22 +64,26 @@ Vue.component('online',{
 })
 
 Vue.component('cryptoInfo',{
+
   props:['cryptoType','cryptoAlgo','cryptoKeySize'],
+
   template:`
   <div class="cryptoInfo">
-      <span>Crypto-Type</span>
-      <span>Algorithm</span>
-      <span>Key size</span>
+      <span v-if="cryptoType">Crypto-Type</span>
+      <span v-if="cryptoAlgo">Algorithm</span>
+      <span v-if="cryptoKeySize">Key size</span>
 
-      <h3>{{cryptoType}}</h3>
-      <h3>{{cryptoAlgo}}</h3>
-      <h3>{{cryptoKeySize}}-bit</h3>
+      <h3 v-if="cryptoType">{{cryptoType}}</h3>
+      <h3 v-if="cryptoAlgo">{{cryptoAlgo}}</h3>
+      <h3 v-if="cryptoKeySize">{{cryptoKeySize}}-bit</h3>
   </div>
   `
 })
 
 Vue.component('secretKey',{
+
   props:['secretKey'],
+
   template:`
   <div class="secretKey">
     <h2>your key is:</h2>
@@ -79,30 +100,28 @@ Vue.component('secretKey',{
 
   </div>
   `,
+
   data:function(){
     return {editBoolean:false}
   },
+
   methods:{
+
     changeSecretKey: function(){
       this.editBoolean = false;
       cryptoApp.secretKey = $('.secretKey :input').val();
     },
+
     editButton: function(){
       this.editBoolean = true;
     }
   }
 })
 
-function fakeEnc(text){
-  if(text == "") return "";
-  return text + ' enc***';
-}
-function fakeDec(text){
-  return "dec*** "+text;
-}
-
 Vue.component('chatBoxEnc',{
+
   props:['publicMsgEnc','realTimeEncMsg'],
+
   template:`
   <div class="chatBox chatBoxEnc">
 
@@ -122,7 +141,9 @@ Vue.component('chatBoxEnc',{
 })
 
 Vue.component('chatBox',{
+
   props:['value','publicMsg'],
+
   template:`
   <div class="chatBox">
 
@@ -139,31 +160,31 @@ Vue.component('chatBox',{
 
   </div>
   `,
+
   methods:{
     sendMsg: function(){
-
-      let yourTypedMsg = $('.inputArea input').val().trim();
-      if(!yourTypedMsg) return;
-
-      cryptoApp.publicMsg.push({msg:yourTypedMsg, state:'out'});
-      cryptoApp.publicMsgEnc.push({msg:fakeEnc(yourTypedMsg), state:'out'});
-
-      cryptoApp.realTimeMsg="";
+      this.$emit('sendMsg');
     },
+  }
 
-}
 })
 
 Vue.component('fileArea',{
+
   template:`
   <div class="fileArea">
   Drag files to here to send them...
   </div>
   `
 })
+
+
 let cryptoApp = new Vue({
+
   el:'#cryptoApp',
+
   data:{
+
     cryptoType:'Symmetric',
     cryptoAlgo:'AES',
     cryptoKeySize: '192',
@@ -188,6 +209,7 @@ let cryptoApp = new Vue({
 
 
   },
+
   template:`
   <div id='cryptoApp'>
     <div class="line"></div>
@@ -195,20 +217,43 @@ let cryptoApp = new Vue({
     <div class="col-2-3">
       <cryptoInfo :cryptoType="cryptoType" :cryptoAlgo="cryptoAlgo" :cryptoKeySize="cryptoKeySize"></cryptoInfo>
       <secretKey :secretKey="secretKey"></secretKey>
-      <chatBox :publicMsg="publicMsg" v-model="realTimeMsg"></chatBox>
+      <chatBox :publicMsg="publicMsg" v-model="realTimeMsg" v-on:sendMsg="sendMsg"></chatBox>
       <chatBoxEnc :publicMsgEnc="publicMsgEnc" :realTimeEncMsg="realTimeEncMsg"></chatBoxEnc>
       <fileArea></fileArea>
     </div>
   </div>
   `,
+
   computed:{
     realTimeEncMsg:function(){
       return fakeEnc(this.realTimeMsg);
     }
+  },
+
+  methods:{
+    sendMsg: function(){
+
+      cryptoApp.publicMsg.push({msg:this.realTimeMsg, state:'out'});
+      cryptoApp.publicMsgEnc.push({msg:this.realTimeEncMsg, state:'out'});
+
+      cryptoApp.realTimeMsg="";
+
+      setTimeout(function () {
+        let a = document.querySelectorAll('.msgArea')[0];
+        a.scrollTop = a.scrollHeight;
+
+        let b = document.querySelectorAll('.msgArea')[1];
+        b.scrollTop = b.scrollHeight;
+      }, 0);
+
+      //send real time
+      //io
+
+    }//sendMsg
   }
 })
 
-
+//io
 function addOnlinePerson(personName){
 
   let newId = cryptoApp.peopleArray.length;
@@ -221,6 +266,7 @@ function addOnlinePerson(personName){
   cryptoApp.peopleArray.push(newPerson);
 }
 
+//io
 function removeOnlinePerson(personName){
 
   let tmp = [];
@@ -235,6 +281,7 @@ function removeOnlinePerson(personName){
 
 }
 
+//io
 function recvMsg(text){
 
   cryptoApp.publicMsgEnc.push({msg:text, state:'in'});
