@@ -94,34 +94,35 @@ Vue.component('secretKey',{
 })
 
 function fakeEnc(text){
+  if(text == "") return "";
   return text + ' enc***';
+}
+function fakeDec(text){
+  return "dec*** "+text;
 }
 
 Vue.component('chatBoxEnc',{
-  props:['publicMsg','realTimeEncValue'],
+  props:['publicMsgEnc','realTimeEncMsg'],
   template:`
-  <div class="chatBox">
+  <div class="chatBox chatBoxEnc">
 
     <div class="msgArea">
 
-        <span v-for="i in publicMsg" :class="i.state">{{fakeEnc(i.msg)}}</span>
+        <span v-for="i in publicMsgEnc" :class="i.state">{{i.msg}}</span>
 
     </div>
 
     <div class="inputArea inputAreaEnc">
-        <textarea>{{realTimeEncValue}}</textarea>
-        <button>send</button>
+      <span>{{realTimeEncMsg}}</span>
     </div>
 
   </div>
   `,
-  methods:{
-    fakeEnc:fakeEnc,
-  }
+
 })
 
 Vue.component('chatBox',{
-  props:['publicMsg'],
+  props:['value','publicMsg'],
   template:`
   <div class="chatBox">
 
@@ -132,7 +133,7 @@ Vue.component('chatBox',{
     </div>
 
     <div class="inputArea">
-        <textarea @keyup.enter="sendMsg" @keyup="realTimeEnc"></textarea>
+        <input type="text" @keyup.enter="sendMsg" :value="value" @input="$emit('input',$event.target.value)">
         <button @click="sendMsg">send</button>
     </div>
 
@@ -141,20 +142,15 @@ Vue.component('chatBox',{
   methods:{
     sendMsg: function(){
 
-      let yourTypedMsg = $('.inputArea textarea').val().trim();
+      let yourTypedMsg = $('.inputArea input').val().trim();
       if(!yourTypedMsg) return;
 
       cryptoApp.publicMsg.push({msg:yourTypedMsg, state:'out'});
-      $('.inputArea textarea').val('')
+      cryptoApp.publicMsgEnc.push({msg:fakeEnc(yourTypedMsg), state:'out'});
 
+      cryptoApp.realTimeMsg="";
     },
-    realTimeEnc: function(){
-      let yourTypedMsg = $('.inputArea textarea').val().trim();
-      if(!yourTypedMsg) return;
 
-      cryptoApp.realTimeEncValue = fakeEnc(yourTypedMsg);
-
-  }
 }
 })
 
@@ -178,17 +174,18 @@ let cryptoApp = new Vue({
       {id:0, name:'louay'},
       {id:1, name:'anas'},
       {id:2, name:'moied'},
-      
+
     ],
     username:'',
 
     publicMsg:[
-      {msg:'hello',state:'in'},
-      {msg:'oh hi',state:'out'},
-      {msg:'how are you?',state:'in'},
-      {msg:'fine',state:'out'},
+
     ],
-    realTimeEncValue:'',
+    publicMsgEnc:[
+
+    ],
+    realTimeMsg:'',
+
 
   },
   template:`
@@ -198,12 +195,17 @@ let cryptoApp = new Vue({
     <div class="col-2-3">
       <cryptoInfo :cryptoType="cryptoType" :cryptoAlgo="cryptoAlgo" :cryptoKeySize="cryptoKeySize"></cryptoInfo>
       <secretKey :secretKey="secretKey"></secretKey>
-      <chatBox :publicMsg="publicMsg"></chatBox>
-      <chatBoxEnc :publicMsg="publicMsg" :realTimeEncValue="realTimeEncValue"></chatBoxEnc>
+      <chatBox :publicMsg="publicMsg" v-model="realTimeMsg"></chatBox>
+      <chatBoxEnc :publicMsgEnc="publicMsgEnc" :realTimeEncMsg="realTimeEncMsg"></chatBoxEnc>
       <fileArea></fileArea>
     </div>
   </div>
-  `
+  `,
+  computed:{
+    realTimeEncMsg:function(){
+      return fakeEnc(this.realTimeMsg);
+    }
+  }
 })
 
 
@@ -230,6 +232,13 @@ function removeOnlinePerson(personName){
 
   while(tmp.length)
     cryptoApp.peopleArray.push(tmp.pop());
+
+}
+
+function recvMsg(text){
+
+  cryptoApp.publicMsgEnc.push({msg:text, state:'in'});
+  cryptoApp.publicMsg.push({msg:fakeDec(text), state:'in'});
 
 }
 

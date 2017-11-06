@@ -215,7 +215,7 @@ aside{
     padding: 3px;
 }
 
-.inputArea textarea{
+.inputArea input{
     display: block;
     width: 98%;
     min-height: 10px;
@@ -258,4 +258,19 @@ aside{
   background-color: lightgreen;
   margin-top: 10px;
   text-align: center;
+}
+
+.chatBoxEnc{
+  position: absolute;
+  left: 64.3%;
+  width: 34%;
+}
+
+.inputArea > span{
+    display: block;
+    padding: 5px;
+    word-wrap: break-word;
+    margin-top: 5px;
+    font-size: 17px;
+
 }
