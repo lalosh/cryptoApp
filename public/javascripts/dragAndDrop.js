@@ -1,3 +1,4 @@
+/*drag and drop file*/
 console.log('hello from drag and drop script');
 var enc = new TextDecoder();
 
@@ -22,7 +23,10 @@ function drop_handler(ev) {
         reader.readAsText(f);
 
         setTimeout(function () {
+
           // console.log(reader.result);
+          // console.log(typeof reader.result);
+
           //io send file //io recv file is the same
           cryptoApp.publicMsg.push({msg:reader.result, state:'out'});
           cryptoApp.publicMsgEnc.push({msg:fakeEnc(reader.result), state:'out'});
@@ -67,3 +71,4 @@ function dragend_handler(ev) {
     ev.dataTransfer.clearData();
 
 }
+/*drag and drop file*/
