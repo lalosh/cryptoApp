@@ -124,6 +124,35 @@ Vue.component('secretKey',{
       this.editBoolean = false;
       cryptoApp.secretKey = $('.secretKey :input').val();
       //send new secret key via RSA
+      /**/
+      let a = new cryptoRSA();
+      let publicKey,privateKey;
+
+      a.createKeyPair()
+      .then(function(){
+
+
+          publicKey = a.getPublicKey();
+          privateKey = a.getPrivateKey();
+          // console.log(publicKey);
+          // console.log(privateKey);
+          //send publicKey
+          socket.emit('sendPublicKey', publicKey);
+          
+          // a.encrypt("hello man,is this good?", a.getPublicKey())
+          // .then(function(cipher){
+              
+          //     a.decrypt(cipher, a.getPrivateKey())
+          //     .then(function(plaintext){
+          //         console.log(arrayBuffer2String(plaintext));
+
+          //     })
+          
+          // });
+
+      })
+
+      /**/
     },
 
     editButton: function(){

@@ -8,13 +8,14 @@ let drop_handler,dragover_handler,dragend_handler;
 
 let socket = io();
 
-socket.on('recv',function(msg){
-  console.log('----------------')
-  console.log(msg);
-  console.log('----------------')
-  recvMsg(msg);
+socket.on('sendMsg',function(msg,username){
+  if(!username) username= "unknown";
+  recvMsg(msg, username);
 });
 
+socket.on('newUsername',function(username){
+    addOnlinePerson(username);
+});
 
 Vue.component('loginForm', {
 
@@ -38,8 +39,11 @@ Vue.component('loginForm', {
   methods:{
     changeUserName: function(){
       cryptoApp.username = $('.loginForm :input').val();
+
+
       //send username to server with public key
       //request all user list
+      socket.emit('newUsername', cryptoApp.username);
     }
   }
 
@@ -121,6 +125,35 @@ Vue.component('secretKey',{
       this.editBoolean = false;
       cryptoApp.secretKey = $('.secretKey :input').val();
       //send new secret key via RSA
+      /**/
+      let a = new cryptoRSA();
+      let publicKey,privateKey;
+
+      a.createKeyPair()
+      .then(function(){
+
+
+          publicKey = a.getPublicKey();
+          privateKey = a.getPrivateKey();
+          // console.log(publicKey);
+          // console.log(privateKey);
+          //send publicKey
+          socket.emit('sendPublicKey', publicKey);
+          
+          // a.encrypt("hello man,is this good?", a.getPublicKey())
+          // .then(function(cipher){
+              
+          //     a.decrypt(cipher, a.getPrivateKey())
+          //     .then(function(plaintext){
+          //         console.log(arrayBuffer2String(plaintext));
+
+          //     })
+          
+          // });
+
+      })
+
+      /**/
     },
 
     editButton: function(){
@@ -197,8 +230,8 @@ var cryptoApp = new Vue({
   data:{
 
     cryptoType:'Symmetric',
-    cryptoAlgo:'AES',
-    cryptoKeySize: '192',
+    cryptoAlgo:'RC4',
+    cryptoKeySize: '255',
 
     secretKey:'default key',
 
@@ -206,9 +239,7 @@ var cryptoApp = new Vue({
     privateKey:'',
 
     peopleArray:[
-      {id:0, name:'louay'},
-      {id:1, name:'anas'},
-      {id:2, name:'moied'},
+
 
     ],
     username:'',
@@ -259,12 +290,14 @@ var cryptoApp = new Vue({
       cryptoApp.publicMsg.push({msg:this.realTimeMsg, state:'out'});
       cryptoApp.publicMsgEnc.push({msg:this.realTimeEncMsg, state:'out'});
 
-      cryptoApp.realTimeMsg="";
 
 
       //send real time enc msg
       //io
-      socket.emit('sendMsg',this.realTimeEncMsg);
+      socket.emit('sendMsg',this.realTimeEncMsg, this.username);
+
+      cryptoApp.realTimeMsg="";
+
 
 
     },//sendMsg
@@ -334,15 +367,15 @@ function removeOnlinePerson(personName){
 
 
 //io
-function recvMsg(text){
+function recvMsg(text,username){
 
-  cryptoApp.publicMsgEnc.push({msg:text, state:'in'});
+  cryptoApp.publicMsgEnc.push({msg:( username+": "+ text), state:'in'});
 
   let a = new symCrypto();
   a.changePassword(cryptoApp.secretKey);
 
 
-  cryptoApp.publicMsg.push({msg:a.decrypt(text), state:'in'});
+  cryptoApp.publicMsg.push({msg: (username+": "+a.decrypt(text)), state:'in'});
 
 }
 
@@ -403,7 +436,7 @@ $(document).ready(function(){
 
             cryptoApp.publicMsgEnc.push({msg:res, state:'out'});
             //send io the 'res'
-            socket.emit('sendMsg',res);
+            socket.emit('sendMsg',res, cryptoApp.username);
           }, 1000);
 
           /**/

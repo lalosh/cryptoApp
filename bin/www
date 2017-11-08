@@ -35,6 +35,10 @@ io.on('connection',function(socket){
     socket.broadcast.emit('newUsername',username);
   })
 
+  socket.on('sendPublicKey',function(publicKey){
+    console.log(publicKey);
+  })
+
 });
 /**
  * Listen on provided port, on all network interfaces.
