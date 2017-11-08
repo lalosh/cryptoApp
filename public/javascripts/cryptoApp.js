@@ -1,11 +1,11 @@
 const symCrypto = require('./symCrypto/symCrypto.js');
 
 //include before everything
-let drop_handler,dragover_handler,dragend_handler;
+// let drop_handler,dragover_handler,dragend_handler;
 
 
 
-// const asymCrypto = require('./asymCrypto/asymCrypto.js');
+const asymCrypto = require('./asymCrypto/asymCrypto.js');
 
 
 
