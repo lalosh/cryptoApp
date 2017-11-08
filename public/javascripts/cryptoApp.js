@@ -1,30 +1,20 @@
-const symCrypto = require('./symCrypto/symCrypto.js');
-
 //include before everything
-// let drop_handler,dragover_handler,dragend_handler;
+let drop_handler,dragover_handler,dragend_handler;
 
 
+// const symCrypto = require('./symCrypto/symCrypto.js');
+// const asymCrypto = require('./asymCrypto/asymCrypto.js');
 
-const asymCrypto = require('./asymCrypto/asymCrypto.js');
+let socket = io();
 
+socket.on('sendMsg',function(msg,username){
+  if(!username) username= "unknown";
+  recvMsg(msg, username);
+});
 
-
-
-
-
-
-
-
-
-
-function fakeEnc(text){
-  if(text == "") return "";
-  return text + ' enc***';
-}
-
-function fakeDec(text){
-  return "dec*** "+text;
-}
+socket.on('newUsername',function(username){
+    addOnlinePerson(username);
+});
 
 Vue.component('loginForm', {
 
@@ -48,6 +38,11 @@ Vue.component('loginForm', {
   methods:{
     changeUserName: function(){
       cryptoApp.username = $('.loginForm :input').val();
+
+
+      //send username to server with public key
+      //request all user list
+      socket.emit('newUsername', cryptoApp.username);
     }
   }
 
@@ -128,6 +123,7 @@ Vue.component('secretKey',{
     changeSecretKey: function(){
       this.editBoolean = false;
       cryptoApp.secretKey = $('.secretKey :input').val();
+      //send new secret key via RSA
     },
 
     editButton: function(){
@@ -204,8 +200,8 @@ var cryptoApp = new Vue({
   data:{
 
     cryptoType:'Symmetric',
-    cryptoAlgo:'AES',
-    cryptoKeySize: '192',
+    cryptoAlgo:'RC4',
+    cryptoKeySize: '255',
 
     secretKey:'default key',
 
@@ -213,9 +209,7 @@ var cryptoApp = new Vue({
     privateKey:'',
 
     peopleArray:[
-      {id:0, name:'louay'},
-      {id:1, name:'anas'},
-      {id:2, name:'moied'},
+
 
     ],
     username:'',
@@ -266,10 +260,15 @@ var cryptoApp = new Vue({
       cryptoApp.publicMsg.push({msg:this.realTimeMsg, state:'out'});
       cryptoApp.publicMsgEnc.push({msg:this.realTimeEncMsg, state:'out'});
 
+
+
+      //send real time enc msg
+      //io
+      socket.emit('sendMsg',this.realTimeEncMsg, this.username);
+
       cryptoApp.realTimeMsg="";
 
-      //send real time
-      //io
+
 
     },//sendMsg
   },
@@ -335,18 +334,35 @@ function removeOnlinePerson(personName){
 
 }
 
-//io
-function recvMsg(text){
 
-  cryptoApp.publicMsgEnc.push({msg:text, state:'in'});
-  cryptoApp.publicMsg.push({msg:fakeDec(text), state:'in'});
+
+//io
+function recvMsg(text,username){
+
+  cryptoApp.publicMsgEnc.push({msg:( username+": "+ text), state:'in'});
+
+  let a = new symCrypto();
+  a.changePassword(cryptoApp.secretKey);
+
+
+  cryptoApp.publicMsg.push({msg: (username+": "+a.decrypt(text)), state:'in'});
 
 }
 
 
 
 
+
+
+
+
+
+
+
+
+
 $(document).ready(function(){
+
 
   console.log('jQuery is running...');
 
@@ -382,13 +398,15 @@ $(document).ready(function(){
             //io send file //io recv file is the same
             cryptoApp.publicMsg.push({msg:reader.result, state:'out'});
 
-            console.log(typeof reader.result);
+
+            // console.log(typeof reader.result);
             let symCryptoInstance = new symCrypto();
             symCryptoInstance.changePassword(cryptoApp.secretKey);
             let res = symCryptoInstance.encrypt(reader.result);
 
             cryptoApp.publicMsgEnc.push({msg:res, state:'out'});
-
+            //send io the 'res'
+            socket.emit('sendMsg',res, cryptoApp.username);
           }, 1000);
 
           /**/
@@ -402,7 +420,6 @@ $(document).ready(function(){
             // console.log(" file[" + i + "].name = " + dt.files[i].name);
           }
 
-    // socket.emit('sendFiles',filesArray);
   }
 
   dragover_handler=function (ev) {
@@ -432,3 +449,4 @@ $(document).ready(function(){
   /*drag and drop file*/
 
 });
+
