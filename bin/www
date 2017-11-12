@@ -36,7 +36,8 @@ io.on('connection',function(socket){
   })
 
   socket.on('sendPublicKey',function(publicKey){
-    console.log(publicKey);
+    console.log("publicKey sent: ",publicKey);
+    socket.broadcast.emit('sendPublicKey', publicKey);
   })
 
 });

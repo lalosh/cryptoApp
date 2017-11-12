@@ -17,6 +17,30 @@ socket.on('newUsername',function(username){
     addOnlinePerson(username);
 });
 
+socket.on('sendPublicKey',function(publicKey){
+  console.log('received from server!!');
+  console.log(publicKey);
+    
+    crypto.subtle.importKey(
+      "raw",
+      (publicKey),
+      {
+        name: "RSA-OAEP",
+        modulusLength: 2048,
+         publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
+        hash: {name: "SHA-256"}
+      },
+      true,
+      ["encrypt","decrypt"])
+    .then(function(e){
+        console.log('after importing!');
+        console.log(e);
+    }, function(e){
+        console.log(e);
+    });
+
+})
+
 Vue.component('loginForm', {
 
   props:['username'],
@@ -135,10 +159,18 @@ Vue.component('secretKey',{
 
           publicKey = a.getPublicKey();
           privateKey = a.getPrivateKey();
-          // console.log(publicKey);
+          console.log('~~',publicKey);
           // console.log(privateKey);
           //send publicKey
-          socket.emit('sendPublicKey', publicKey);
+          crypto.subtle.exportKey("raw", publicKey)
+          .then(function(result){
+              console.log((result));
+              socket.emit('sendPublicKey', (result));
+          },
+          function(err){
+              console.log(err);
+          })
+
           
           // a.encrypt("hello man,is this good?", a.getPublicKey())
           // .then(function(cipher){
