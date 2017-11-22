@@ -1,6 +1,5 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 //include before everything
-let drop_handler,dragover_handler,dragend_handler;
 
 
 // const symCrypto = require('./symCrypto/symCrypto.js');
@@ -8,8 +7,31 @@ let drop_handler,dragover_handler,dragend_handler;
 
 let socket = io();
 
+socket.on('testAPI',function(o,k){
+  let b = new cryptoAPI('AES');
+  b.importKey(k)
+  .then(function(key){
+    
+    console.log('----object to array buffer----')
+    let buff = new ArrayBuffer(16);
+    for(let i=0;i<16;i++){
+      buff[i] = o.iv[i]
+    }
+    let view = new Uint8Array(buff);
+    console.log('--------')
+    
+    b.decrypt(o.cipherText, view)
+    .then(function(theOriginalMsg){
+      console.log(arrayBufferToString(theOriginalMsg))
+    })
+  })
+})
+
+
 socket.on('sendMsg',function(msg,username){
   if(!username) username= "unknown";
+  
+
   recvMsg(msg, username);
 });
 
@@ -22,16 +44,17 @@ socket.on('sendPublicKey',function(publicKey){
   console.log(publicKey);
     
     crypto.subtle.importKey(
-      "raw",
-      (publicKey),
+      "spki",
+      publicKey,
       {
         name: "RSA-OAEP",
         modulusLength: 2048,
-         publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
+        publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
         hash: {name: "SHA-256"}
       },
       true,
-      ["encrypt","decrypt"])
+      ["encrypt"]
+    )
     .then(function(e){
         console.log('after importing!');
         console.log(e);
@@ -162,7 +185,7 @@ Vue.component('secretKey',{
           console.log('~~',publicKey);
           // console.log(privateKey);
           //send publicKey
-          crypto.subtle.exportKey("raw", publicKey)
+          crypto.subtle.exportKey("spki", publicKey)
           .then(function(result){
               console.log((result));
               socket.emit('sendPublicKey', (result));
@@ -326,11 +349,34 @@ var cryptoApp = new Vue({
 
       //send real time enc msg
       //io
-      socket.emit('sendMsg',this.realTimeEncMsg, this.username);
 
+      if(cryptoApp.username == 'anas') {
+        console.log('hi anas');
+        socket.emit('tolouay',this.realTimeEncMsg, this.username);
+        
+      }
+      else{
+        //what original was here
+        socket.emit('sendMsg',this.realTimeEncMsg, this.username);
+        
+        let a = new cryptoAPI('AES');
+        a.generateKey()
+        .then(function(key){
+          a.encrypt(stringToArrayBuffer('hello this is a test for the api'))
+          .then(function(cipherObj){
+
+            a.exportKey()
+            .then(function(theKeyToExport){
+              socket.emit('testAPI', cipherObj, theKeyToExport);
+              console.log('message sent');
+            })
+
+          })
+        })
+        
+      }
+    
       cryptoApp.realTimeMsg="";
-
-
 
     },//sendMsg
   },
@@ -410,107 +456,4 @@ function recvMsg(text,username){
   cryptoApp.publicMsg.push({msg: (username+": "+a.decrypt(text)), state:'in'});
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-$(document).ready(function(){
-
-
-  console.log('jQuery is running...');
-
-  /*drag and drop file*/
-  console.log('hello from drag and drop script');
-  var enc = new TextDecoder();
-
-  drop_handler=function (ev) {
-
-    // console.log("Drop");
-    ev.preventDefault();
-
-    let filesArray = [];
-    var dt = ev.dataTransfer;
-
-    // Use DataTransferItemList interface to access the file(s)
-    if (dt.items)
-      for (var i=0; i < dt.items.length; i++)
-        if (dt.items[i].kind == "file") {
-
-          var f = dt.items[i].getAsFile();
-
-          /**/
-
-          let reader = new FileReader();
-          reader.readAsText(f);
-
-          setTimeout(function () {
-
-            // console.log(reader.result);
-            // console.log(typeof reader.result);
-
-            //io send file //io recv file is the same
-            cryptoApp.publicMsg.push({msg:reader.result, state:'out'});
-
-
-            // console.log(typeof reader.result);
-            let symCryptoInstance = new symCrypto();
-            symCryptoInstance.changePassword(cryptoApp.secretKey);
-            let res = symCryptoInstance.encrypt(reader.result);
-
-            cryptoApp.publicMsgEnc.push({msg:res, state:'out'});
-            //send io the 'res'
-            socket.emit('sendMsg',res, cryptoApp.username);
-          }, 1000);
-
-          /**/
-          filesArray.push(f);
-          // console.log(" file[" + i + "].name = " + f.name);
-          }
-
-    // Use DataTransfer interface to access the file(s)
-     else
-          for (var i=0; i < dt.files.length; i++) {
-            // console.log(" file[" + i + "].name = " + dt.files[i].name);
-          }
-
-  }
-
-  dragover_handler=function (ev) {
-
-    // console.log("dragOver");
-    // Prevent default select and drag behavior
-    ev.preventDefault();
-  }
-
-  dragend_handler = function dragend_handler(ev) {
-
-    // console.log("dragEnd");
-    // Remove all of the drag data
-    var dt = ev.dataTransfer;
-
-    if (dt.items)
-      // Use DataTransferItemList interface to remove the drag data
-      for (var i = 0; i < dt.items.length; i++) {
-        dt.items.remove(i);
-      }
-
-    else
-      // Use DataTransfer interface to remove the drag data
-      ev.dataTransfer.clearData();
-
-  }
-  /*drag and drop file*/
-
-});
-
-
 },{}]},{},[1]);

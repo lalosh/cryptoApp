@@ -21,24 +21,57 @@ app.set('port', port);
 
 var server = http.createServer(app);
 
+let allPeople = {};
 var io = require('socket.io')(server);
 io.on('connection',function(socket){
 
+
   console.log('new user connected');
+  console.log("id is",socket.id);
 
   socket.on('sendMsg',function(msg,username){
     console.log( username +" : "+ msg);
     socket.broadcast.emit('sendMsg', msg,username);
   })
 
-  socket.on('newUsername',function(username){
-    socket.broadcast.emit('newUsername',username);
+  // for private chat
+  socket.on('sendMsgTo',function(fromUsername, targetUsername, msg){
+    io.to(allPeople[targetUsername].socketid)
+    .emit('sendMsgTo',fromUsername, msg)
+  })
+  //
+  socket.on('sendPersonalInfo', function(username, publicKeyED_buffer,publicKeySV_buffer){
+   
+    allPeople[username] = {
+      socketid: socket.id,
+      publicKeyED: publicKeyED_buffer,
+      publicKeySV: publicKeySV_buffer,      
+    }
+
+    socket.broadcast.emit('newUsername', username, publicKeyED_buffer, publicKeySV_buffer);
+  })
+  //
+  socket.on('requestPublicKeyED',function(fromUsername, targetUsername){
+    io.to(allPeople[fromUsername].socketid)
+    .emit('requestPublicKeyED', allPeople[targetUsername].publicKeyED)
+  })
+  //
+  socket.on('requestPublicKeySV',function(fromUsername, targetUsername){
+    io.to(allPeople[fromUsername].socketid)
+    .emit('requestPublicKeySV', allPeople[targetUsername].publicKeySV)
+  })
+  //
+  socket.on('testAPI',function(o,key){
+    socket.broadcast.emit('testAPI',o,key);
+    console.log(o,key);
+  })
+  socket.on('tolouay',function(msg,username){
+    console.log('to louay fired!');
+    console.log(allPeople['louay']);
+    io.to(allPeople['louay']).emit('sendMsg', msg,username);
   })
 
-  socket.on('sendPublicKey',function(publicKey){
-    console.log("publicKey sent: ",publicKey);
-    socket.broadcast.emit('sendPublicKey', publicKey);
-  })
+
 
 });
 /**

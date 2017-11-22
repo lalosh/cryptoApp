@@ -1,5 +1,4 @@
 //include before everything
-let drop_handler,dragover_handler,dragend_handler;
 
 
 // const symCrypto = require('./symCrypto/symCrypto.js');
@@ -7,38 +6,50 @@ let drop_handler,dragover_handler,dragend_handler;
 
 let socket = io();
 
+socket.on('testAPI',function(o,k){
+  let b = new cryptoAPI('AES');
+  b.importKey(k)
+  .then(function(key){
+    
+    console.log('----object to array buffer----')
+    let buff = new ArrayBuffer(16);
+    for(let i=0;i<16;i++){
+      buff[i] = o.iv[i]
+    }
+    let view = new Uint8Array(buff);
+    console.log('--------')
+    
+    b.decrypt(o.cipherText, view)
+    .then(function(theOriginalMsg){
+      console.log(arrayBufferToString(theOriginalMsg))
+    })
+  })
+})
+
+
 socket.on('sendMsg',function(msg,username){
   if(!username) username= "unknown";
+  
+
   recvMsg(msg, username);
 });
 
-socket.on('newUsername',function(username){
-    addOnlinePerson(username);
+//
+socket.on('newUsername',function(username, publicKeyED_buffer, publicKeySV_buffer){
+    addOnlinePerson(username, publicKeyED_buffer, publicKeySV_buffer);
 });
+//
 
-socket.on('sendPublicKey',function(publicKey){
-  console.log('received from server!!');
-  console.log(publicKey);
-    
-    crypto.subtle.importKey(
-      "spki",
-      publicKey,
-      {
-        name: "RSA-OAEP",
-        modulusLength: 2048,
-         publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
-        hash: {name: "SHA-256"}
-      },
-      true,
-      ["encrypt"])
-    .then(function(e){
-        console.log('after importing!');
-        console.log(e);
-    }, function(e){
-        console.log(e);
-    });
 
-})
+//////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////
+
+let cryptoAPI_AES = new cryptoAPI('AES');
+let cryptoAPI_RSA = new cryptoAPI('RSA');
+let digSigAPI_SV = new digSigAPI();
 
 Vue.component('loginForm', {
 
@@ -63,10 +74,54 @@ Vue.component('loginForm', {
     changeUserName: function(){
       cryptoApp.username = $('.loginForm :input').val();
 
+      //generate the key for AES
+      cryptoAPI_AES.generateKey()
+      .then(function(sessionKey){
+        cryptoApp.sessionKey = sessionKey;
+      })
 
-      //send username to server with public key
-      //request all user list
-      socket.emit('newUsername', cryptoApp.username);
+      //generate the keys for RSA and DS  
+      cryptoAPI_RSA.generateKey()
+      .then(function(keyPair){
+        cryptoApp.publicKeyED = keyPair.publicKey;
+        cryptoApp.privateKeyED = keyPair.privateKey;
+
+        //send public key of RSA
+        cryptoAPI_RSA.exportKey()
+        .then(function(publicKeyED_buffer){
+
+          //generate the keys for Digital Signature
+          digSigAPI_SV.generateKey()
+          .then(function(keyPair){
+            
+            cryptoApp.publicKeySV = keyPair.publicKey;
+            cryptoApp.privateKeySV = keyPair.privateKey;
+
+            //send public key of DS
+            digSigAPI_SV.exportKey()
+            .then(function(publicKeySV_buffer){
+            
+              socket.emit('sendPersonalInfo', cryptoApp.username, publicKeyED_buffer,publicKeySV_buffer);
+            })
+
+          })
+          //
+        })
+      })
+      
+
+      
+  
+      //tests
+      setTimeout(() => {
+        console.log('generating keys done!')
+        // console.log(cryptoApp.sessionKey)
+        // console.log(cryptoApp.publicKeyED)
+        // console.log(cryptoApp.privateKeyED)
+        // console.log(cryptoApp.publicKeySV)
+        // console.log(cryptoApp.privateKeySV)    
+      }, 1000);
+
     }
   }
 
@@ -79,13 +134,19 @@ Vue.component('people',{
   template:`
   <div class="people">
 
-      <div class="person" v-for="i in peopleArray" :key="i.id">
+      <div class="person" v-for="i in peopleArray" :key="i.id" v-on:click="changecurrentSelectedUser">
           <h3>{{i.name}}</h3>
           <span>is typing...</span>
       </div>
 
   </div>
-  `
+  `,
+  methods:{
+    changecurrentSelectedUser: function(){
+      cryptoApp.currentSelectedUser = this.$el.childNodes[0].childNodes[0].childNodes[0].data;
+      console.log('current selection: ', cryptoApp.currentSelectedUser);
+    }
+  }
 })
 
 Vue.component('online',{
@@ -147,44 +208,7 @@ Vue.component('secretKey',{
     changeSecretKey: function(){
       this.editBoolean = false;
       cryptoApp.secretKey = $('.secretKey :input').val();
-      //send new secret key via RSA
-      /**/
-      let a = new cryptoRSA();
-      let publicKey,privateKey;
-
-      a.createKeyPair()
-      .then(function(){
-
-
-          publicKey = a.getPublicKey();
-          privateKey = a.getPrivateKey();
-          console.log('~~',publicKey);
-          // console.log(privateKey);
-          //send publicKey
-          crypto.subtle.exportKey("spki", publicKey)
-          .then(function(result){
-              console.log((result));
-              socket.emit('sendPublicKey', (result));
-          },
-          function(err){
-              console.log(err);
-          })
-
-          
-          // a.encrypt("hello man,is this good?", a.getPublicKey())
-          // .then(function(cipher){
-              
-          //     a.decrypt(cipher, a.getPrivateKey())
-          //     .then(function(plaintext){
-          //         console.log(arrayBuffer2String(plaintext));
-
-          //     })
-          
-          // });
-
-      })
-
-      /**/
+    
     },
 
     editButton: function(){
@@ -253,26 +277,48 @@ Vue.component('fileArea',{
   `
 })
 
-
 var cryptoApp = new Vue({
 
   el:'#cryptoApp',
 
   data:{
 
+    encryptedMsgNow: '',
+    //public + private key to encrypt / decrypt
+    publicKeyED: '',
+    privateKeyED: '',
+    
+    //public + private key to sign / verify    
+    publicKeySV: '',
+    privateKeySV: '',
+    
+    //session key by AES
+    sessionKey: '',
+
+    //the secret key entered by the user
+    //we need a session key and a secret key for each user or what?
+    secretKey:'default key',
+    
+    //current selected user to send msg to
+    currentSelectedUser: '',
+
     cryptoType:'Symmetric',
     cryptoAlgo:'RC4',
     cryptoKeySize: '255',
 
-    secretKey:'default key',
 
     publicKey:'',
     privateKey:'',
 
+    //only for names
     peopleArray:[
 
 
     ],
+    
+    //to store personal infos
+    allPeople:{},
+
     username:'',
 
     publicMsg:[
@@ -291,8 +337,6 @@ var cryptoApp = new Vue({
     <div class="line"></div>
     <online :peopleArray='peopleArray' :username='username'></online>
     <div class="col-2-3">
-      <cryptoInfo :cryptoType="cryptoType" :cryptoAlgo="cryptoAlgo" :cryptoKeySize="cryptoKeySize"></cryptoInfo>
-      <secretKey :secretKey="secretKey"></secretKey>
       <chatBox :publicMsg="publicMsg" v-model="realTimeMsg" v-on:sendMsg="sendMsg"></chatBox>
       <chatBoxEnc :publicMsgEnc="publicMsgEnc" :realTimeEncMsg="realTimeEncMsg"></chatBoxEnc>
       <fileArea></fileArea>
@@ -303,11 +347,22 @@ var cryptoApp = new Vue({
   computed:{
     realTimeEncMsg:function(){
       if(this.realTimeMsg){
+        let res = '';
 
-        let symCryptoInstance = new symCrypto();
-        symCryptoInstance.changePassword(this.secretKey);
-        let res = symCryptoInstance.encrypt(this.realTimeMsg);
-        return res;
+        cryptoAPI_AES.encrypt(stringToArrayBuffer(this.realTimeMsg))
+        .then(function(cipherObject){
+          res= cipherObject.cipherText;
+          cryptoApp.encryptedMsgNow = arrayBufferToString(res);
+          console.log(cryptoApp.encryptedMsgNow);
+          
+          return res;
+        
+        })
+        
+        // let symCryptoInstance = new symCrypto();
+        // symCryptoInstance.changePassword(this.secretKey);
+        // let res = symCryptoInstance.encrypt(this.realTimeMsg);
+        // return res;
       }
       else
         return "";
@@ -319,17 +374,41 @@ var cryptoApp = new Vue({
     sendMsg: function(){
 
       cryptoApp.publicMsg.push({msg:this.realTimeMsg, state:'out'});
-      cryptoApp.publicMsgEnc.push({msg:this.realTimeEncMsg, state:'out'});
+      cryptoApp.publicMsgEnc.push({msg:cryptoApp.encryptedMsgNow, state:'out'});
 
 
 
       //send real time enc msg
       //io
-      socket.emit('sendMsg',this.realTimeEncMsg, this.username);
 
+      if(cryptoApp.username == 'anas') {
+        console.log('hi anas');
+        socket.emit('tolouay',this.realTimeEncMsg, this.username);
+        
+      }
+      else{
+        //what original was here
+        socket.emit('sendMsg',this.realTimeEncMsg, this.username);
+        
+        let a = new cryptoAPI('AES');
+        a.generateKey()
+        .then(function(key){
+          a.encrypt(stringToArrayBuffer('hello this is a test for the api'))
+          .then(function(cipherObj){
+
+            a.exportKey()
+            .then(function(theKeyToExport){
+              socket.emit('testAPI', cipherObj, theKeyToExport);
+              console.log('message sent');
+            })
+
+          })
+        })
+        
+      }
+    
       cryptoApp.realTimeMsg="";
-
-
+      cryptoApp.encryptedMsgNow = "";
 
     },//sendMsg
   },
@@ -368,7 +447,7 @@ var cryptoApp = new Vue({
 
 
 //io
-function addOnlinePerson(personName){
+function addOnlinePerson(personName, publicKeyED_buffer, publicKeySV_buffer){
 
   let newId = cryptoApp.peopleArray.length;
 
@@ -378,6 +457,23 @@ function addOnlinePerson(personName){
   };
 
   cryptoApp.peopleArray.push(newPerson);
+
+
+  socket.on('requestPublicKeySV',function(_publicKeySV){
+    obj.publicKeySV = _publicKeySV;
+  })
+  
+  socket.on('requestPublicKeyED',function(_publicKeyED){
+    obj.publicKeyED = _publicKeyED;
+  })
+
+
+  cryptoApp.allPeople[personName] = {
+    publicKeyED: publicKeyED_buffer,
+    publicKeySV: publicKeySV_buffer,
+  };
+
+  console.log(cryptoApp.allPeople);
 }
 
 //io
@@ -409,105 +505,3 @@ function recvMsg(text,username){
   cryptoApp.publicMsg.push({msg: (username+": "+a.decrypt(text)), state:'in'});
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-$(document).ready(function(){
-
-
-  console.log('jQuery is running...');
-
-  /*drag and drop file*/
-  console.log('hello from drag and drop script');
-  var enc = new TextDecoder();
-
-  drop_handler=function (ev) {
-
-    // console.log("Drop");
-    ev.preventDefault();
-
-    let filesArray = [];
-    var dt = ev.dataTransfer;
-
-    // Use DataTransferItemList interface to access the file(s)
-    if (dt.items)
-      for (var i=0; i < dt.items.length; i++)
-        if (dt.items[i].kind == "file") {
-
-          var f = dt.items[i].getAsFile();
-
-          /**/
-
-          let reader = new FileReader();
-          reader.readAsText(f);
-
-          setTimeout(function () {
-
-            // console.log(reader.result);
-            // console.log(typeof reader.result);
-
-            //io send file //io recv file is the same
-            cryptoApp.publicMsg.push({msg:reader.result, state:'out'});
-
-
-            // console.log(typeof reader.result);
-            let symCryptoInstance = new symCrypto();
-            symCryptoInstance.changePassword(cryptoApp.secretKey);
-            let res = symCryptoInstance.encrypt(reader.result);
-
-            cryptoApp.publicMsgEnc.push({msg:res, state:'out'});
-            //send io the 'res'
-            socket.emit('sendMsg',res, cryptoApp.username);
-          }, 1000);
-
-          /**/
-          filesArray.push(f);
-          // console.log(" file[" + i + "].name = " + f.name);
-          }
-
-    // Use DataTransfer interface to access the file(s)
-     else
-          for (var i=0; i < dt.files.length; i++) {
-            // console.log(" file[" + i + "].name = " + dt.files[i].name);
-          }
-
-  }
-
-  dragover_handler=function (ev) {
-
-    // console.log("dragOver");
-    // Prevent default select and drag behavior
-    ev.preventDefault();
-  }
-
-  dragend_handler = function dragend_handler(ev) {
-
-    // console.log("dragEnd");
-    // Remove all of the drag data
-    var dt = ev.dataTransfer;
-
-    if (dt.items)
-      // Use DataTransferItemList interface to remove the drag data
-      for (var i = 0; i < dt.items.length; i++) {
-        dt.items.remove(i);
-      }
-
-    else
-      // Use DataTransfer interface to remove the drag data
-      ev.dataTransfer.clearData();
-
-  }
-  /*drag and drop file*/
-
-});
-

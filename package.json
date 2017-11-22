@@ -1,14 +1,12 @@
 {
   "name": "cryptoapp",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
   "scripts": {
-    "start": "npm run buildjs;nodemon ./bin/www",
-    "buildjs": "browserify ./public/javascripts/cryptoApp.js -o ./public/javascripts/_cryptoApp.js"
+    "start": "nodemon ./bin/www"
   },
   "dependencies": {
     "body-parser": "~1.18.2",
-    "browserify": "^14.5.0",
     "cookie-parser": "~1.4.3",
     "debug": "~2.6.9",
     "express": "~4.15.5",
@@ -16,7 +14,6 @@
     "nodemon": "^1.12.1",
     "pug": "2.0.0-beta11",
     "serve-favicon": "~2.4.5",
-    "socket.io": "^2.0.4",
-    "ursa": "^0.9.4"
+    "socket.io": "^2.0.4"
   }
 }
