@@ -36,17 +36,23 @@ $(document).ready(function(){
               // console.log(typeof reader.result);
   
               //io send file //io recv file is the same
-              cryptoApp.publicMsg.push({msg:reader.result, state:'out'});
+              // cryptoApp.allMsg[cryptoApp.currentSelectedUser].push({msg:reader.result, state:'out'});
   
+              if(!(cryptoApp.allMsg[cryptoApp.currentSelectedUser]))
+                cryptoApp.allMsg[cryptoApp.currentSelectedUser] = [];
+              
+              cryptoApp.allMsg[cryptoApp.currentSelectedUser].push({msg: reader.result, state:'out'});
+      
   
               // console.log(typeof reader.result);
-              let symCryptoInstance = new symCrypto();
-              symCryptoInstance.changePassword(cryptoApp.secretKey);
-              let res = symCryptoInstance.encrypt(reader.result);
+              // let symCryptoInstance = new symCrypto();
+              // symCryptoInstance.changePassword(cryptoApp.secretKey);
+              // let res = symCryptoInstance.encrypt(reader.result);
   
-              cryptoApp.publicMsgEnc.push({msg:res, state:'out'});
+              // cryptoApp.publicMsgEnc.push({msg:res, state:'out'});
               //send io the 'res'
-              socket.emit('sendMsg',res, cryptoApp.username);
+              socket.emit('sendMsgTo',cryptoApp.username, cryptoApp.currentSelectedUser, reader.result);
+              
             }, 1000);
   
             /**/

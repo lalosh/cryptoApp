@@ -1,55 +1,30 @@
-//include before everything
-
-
-// const symCrypto = require('./symCrypto/symCrypto.js');
-// const asymCrypto = require('./asymCrypto/asymCrypto.js');
-
 let socket = io();
 
-socket.on('testAPI',function(o,k){
-  let b = new cryptoAPI('AES');
-  b.importKey(k)
-  .then(function(key){
-    
-    console.log('----object to array buffer----')
-    let buff = new ArrayBuffer(16);
-    for(let i=0;i<16;i++){
-      buff[i] = o.iv[i]
-    }
-    let view = new Uint8Array(buff);
-    console.log('--------')
-    
-    b.decrypt(o.cipherText, view)
-    .then(function(theOriginalMsg){
-      console.log(arrayBufferToString(theOriginalMsg))
-    })
-  })
-})
-
-
-socket.on('sendMsg',function(msg,username){
-  if(!username) username= "unknown";
+////////////////////////
+socket.on('sendMsgTo',function(fromUsername, msgComming){
   
+  if(!(cryptoApp.allMsg[fromUsername])) 
+    cryptoApp.allMsg[fromUsername] = [];
+  
+  cryptoApp.currentSelectedUser = fromUsername;
+  
+  //decryption //receive a msg
+  cryptoApp.allMsg[fromUsername].push({msg:msgComming, state:'in'});
 
-  recvMsg(msg, username);
 });
 
-//
+///////////////////////
 socket.on('newUsername',function(username, publicKeyED_buffer, publicKeySV_buffer){
     addOnlinePerson(username, publicKeyED_buffer, publicKeySV_buffer);
 });
-//
+///////////////////////
 
-
-//////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////
 
 let cryptoAPI_AES = new cryptoAPI('AES');
 let cryptoAPI_RSA = new cryptoAPI('RSA');
 let digSigAPI_SV = new digSigAPI();
+
 
 Vue.component('loginForm', {
 
@@ -105,13 +80,10 @@ Vue.component('loginForm', {
             })
 
           })
-          //
         })
       })
       
 
-      
-  
       //tests
       setTimeout(() => {
         console.log('generating keys done!')
@@ -127,6 +99,7 @@ Vue.component('loginForm', {
 
 });
 
+
 Vue.component('people',{
 
   props:['peopleArray'],
@@ -134,20 +107,15 @@ Vue.component('people',{
   template:`
   <div class="people">
 
-      <div class="person" v-for="i in peopleArray" :key="i.id" v-on:click="changecurrentSelectedUser">
+      <div class="person" v-for="i in peopleArray" :key="i.id">
           <h3>{{i.name}}</h3>
           <span>is typing...</span>
       </div>
 
   </div>
   `,
-  methods:{
-    changecurrentSelectedUser: function(){
-      cryptoApp.currentSelectedUser = this.$el.childNodes[0].childNodes[0].childNodes[0].data;
-      console.log('current selection: ', cryptoApp.currentSelectedUser);
-    }
-  }
 })
+
 
 Vue.component('online',{
 
@@ -161,61 +129,6 @@ Vue.component('online',{
     `
 })
 
-Vue.component('cryptoInfo',{
-
-  props:['cryptoType','cryptoAlgo','cryptoKeySize'],
-
-  template:`
-  <div class="cryptoInfo">
-      <span v-if="cryptoType">Crypto-Type</span>
-      <span v-if="cryptoAlgo">Algorithm</span>
-      <span v-if="cryptoKeySize">Key size</span>
-
-      <h3 v-if="cryptoType">{{cryptoType}}</h3>
-      <h3 v-if="cryptoAlgo">{{cryptoAlgo}}</h3>
-      <h3 v-if="cryptoKeySize">{{cryptoKeySize}}-bit</h3>
-  </div>
-  `
-})
-
-Vue.component('secretKey',{
-
-  props:['secretKey'],
-
-  template:`
-  <div class="secretKey">
-    <h2>your key is:</h2>
-
-    <input v-if="editBoolean" type="text" :value="secretKey" @keyup.enter="changeSecretKey"></input>
-    <h3 v-else>{{secretKey}}</h3>
-
-    <button v-if="!editBoolean"
-            v-on:click="editButton"
-            >edit</button>
-    <button v-else
-            v-on:click="changeSecretKey"
-            >save</button>
-
-  </div>
-  `,
-
-  data:function(){
-    return {editBoolean:false}
-  },
-
-  methods:{
-
-    changeSecretKey: function(){
-      this.editBoolean = false;
-      cryptoApp.secretKey = $('.secretKey :input').val();
-    
-    },
-
-    editButton: function(){
-      this.editBoolean = true;
-    }
-  }
-})
 
 Vue.component('chatBoxEnc',{
 
@@ -268,6 +181,7 @@ Vue.component('chatBox',{
 
 })
 
+
 Vue.component('fileArea',{
 
   template:`
@@ -277,6 +191,8 @@ Vue.component('fileArea',{
   `
 })
 
+
+
 var cryptoApp = new Vue({
 
   el:'#cryptoApp',
@@ -284,6 +200,8 @@ var cryptoApp = new Vue({
   data:{
 
     encryptedMsgNow: '',
+    ivNow:'',
+
     //public + private key to encrypt / decrypt
     publicKeyED: '',
     privateKeyED: '',
@@ -295,40 +213,31 @@ var cryptoApp = new Vue({
     //session key by AES
     sessionKey: '',
 
-    //the secret key entered by the user
-    //we need a session key and a secret key for each user or what?
-    secretKey:'default key',
-    
     //current selected user to send msg to
     currentSelectedUser: '',
 
-    cryptoType:'Symmetric',
-    cryptoAlgo:'RC4',
-    cryptoKeySize: '255',
-
-
-    publicKey:'',
-    privateKey:'',
-
     //only for names
     peopleArray:[
-
-
     ],
     
     //to store personal infos
-    allPeople:{},
+    allPeople:{
+    },
 
     username:'',
 
-    publicMsg:[
+    currentMsgArray:[
+      {msg:'how are you?',state:'out'}
+    ],
+    currentMsgArrayEnc:[
 
     ],
-    publicMsgEnc:[
+    
+    //this msgs objects working according to the username
+    allMsg:{},
+    allMsgEnc:{},
 
-    ],
     realTimeMsg:'',
-
 
   },
 
@@ -336,84 +245,41 @@ var cryptoApp = new Vue({
   <div id='cryptoApp'>
     <div class="line"></div>
     <online :peopleArray='peopleArray' :username='username'></online>
+   
     <div class="col-2-3">
-      <chatBox :publicMsg="publicMsg" v-model="realTimeMsg" v-on:sendMsg="sendMsg"></chatBox>
-      <chatBoxEnc :publicMsgEnc="publicMsgEnc" :realTimeEncMsg="realTimeEncMsg"></chatBoxEnc>
+      <chatBox :publicMsg="currentMsgArray" v-model="realTimeMsg" v-on:sendMsg="sendMsg"></chatBox>
+      <chatBoxEnc :publicMsgEnc="currentMsgArrayEnc"></chatBoxEnc>
       <fileArea></fileArea>
     </div>
   </div>
   `,
 
-  computed:{
-    realTimeEncMsg:function(){
-      if(this.realTimeMsg){
-        let res = '';
-
-        cryptoAPI_AES.encrypt(stringToArrayBuffer(this.realTimeMsg))
-        .then(function(cipherObject){
-          res= cipherObject.cipherText;
-          cryptoApp.encryptedMsgNow = arrayBufferToString(res);
-          console.log(cryptoApp.encryptedMsgNow);
-          
-          return res;
-        
-        })
-        
-        // let symCryptoInstance = new symCrypto();
-        // symCryptoInstance.changePassword(this.secretKey);
-        // let res = symCryptoInstance.encrypt(this.realTimeMsg);
-        // return res;
-      }
-      else
-        return "";
-
-    }
-  },
 
   methods:{
     sendMsg: function(){
 
-      cryptoApp.publicMsg.push({msg:this.realTimeMsg, state:'out'});
-      cryptoApp.publicMsgEnc.push({msg:cryptoApp.encryptedMsgNow, state:'out'});
+      if(!(cryptoApp.currentSelectedUser)) return;
+
+      console.log('send button clicked!!')
+      
+      if(!(cryptoApp.allMsg[cryptoApp.currentSelectedUser]))
+        cryptoApp.allMsg[cryptoApp.currentSelectedUser] = [];
+
+      cryptoApp.allMsg[cryptoApp.currentSelectedUser].push({msg: this.realTimeMsg, state:'out'});
+
+      //send msg
+      socket.emit('sendMsgTo',cryptoApp.username, cryptoApp.currentSelectedUser, this.realTimeMsg)
 
 
-
-      //send real time enc msg
-      //io
-
-      if(cryptoApp.username == 'anas') {
-        console.log('hi anas');
-        socket.emit('tolouay',this.realTimeEncMsg, this.username);
-        
-      }
-      else{
-        //what original was here
-        socket.emit('sendMsg',this.realTimeEncMsg, this.username);
-        
-        let a = new cryptoAPI('AES');
-        a.generateKey()
-        .then(function(key){
-          a.encrypt(stringToArrayBuffer('hello this is a test for the api'))
-          .then(function(cipherObj){
-
-            a.exportKey()
-            .then(function(theKeyToExport){
-              socket.emit('testAPI', cipherObj, theKeyToExport);
-              console.log('message sent');
-            })
-
-          })
-        })
-        
-      }
-    
       cryptoApp.realTimeMsg="";
-      cryptoApp.encryptedMsgNow = "";
 
     },//sendMsg
   },
+
+
   watch:{
-    publicMsg: function(){
+    
+    currentMsgArray: function(){
 
       setTimeout(function () {
         let a = document.querySelectorAll('.msgArea')[0];
@@ -424,7 +290,8 @@ var cryptoApp = new Vue({
       }, 0);
 
     },
-    publicMsgEnc: function(){
+    
+    currentMsgArrayEnc: function(){
 
       setTimeout(function () {
         let a = document.querySelectorAll('.msgArea')[0];
@@ -435,18 +302,15 @@ var cryptoApp = new Vue({
       }, 0);
 
     }
-  }
+
+  }//watch
+
 })
 
 
 
-
-
-
-
-
-
 //io
+//////////////////////////
 function addOnlinePerson(personName, publicKeyED_buffer, publicKeySV_buffer){
 
   let newId = cryptoApp.peopleArray.length;
@@ -458,50 +322,32 @@ function addOnlinePerson(personName, publicKeyED_buffer, publicKeySV_buffer){
 
   cryptoApp.peopleArray.push(newPerson);
 
-
-  socket.on('requestPublicKeySV',function(_publicKeySV){
-    obj.publicKeySV = _publicKeySV;
-  })
-  
-  socket.on('requestPublicKeyED',function(_publicKeyED){
-    obj.publicKeyED = _publicKeyED;
-  })
-
-
+  //add personal info and keys
   cryptoApp.allPeople[personName] = {
     publicKeyED: publicKeyED_buffer,
     publicKeySV: publicKeySV_buffer,
   };
 
-  console.log(cryptoApp.allPeople);
 }
-
-//io
-function removeOnlinePerson(personName){
-
-  let tmp = [];
-
-  while(cryptoApp.peopleArray[cryptoApp.peopleArray.length-1].name != personName)
-    tmp.push(cryptoApp.peopleArray.pop());
-
-  cryptoApp.peopleArray.pop();
-
-  while(tmp.length)
-    cryptoApp.peopleArray.push(tmp.pop());
-
-}
+//////////////////////////////
 
 
+$(document).ready(function(){
 
-//io
-function recvMsg(text,username){
+  //change current selected user
+  $('.people').click(function(event){
 
-  cryptoApp.publicMsgEnc.push({msg:( username+": "+ text), state:'in'});
+    cryptoApp.currentSelectedUser = $(event.target).text();
 
-  let a = new symCrypto();
-  a.changePassword(cryptoApp.secretKey);
+    if(!(cryptoApp.allMsg[cryptoApp.currentSelectedUser])) 
+      cryptoApp.allMsg[cryptoApp.currentSelectedUser]=[];
 
+    if(!(cryptoApp.allMsgEnc[cryptoApp.currentSelectedUser])) 
+      cryptoApp.allMsgEnc[cryptoApp.currentSelectedUser]=[];
+    
+    cryptoApp.currentMsgArray = cryptoApp.allMsg[cryptoApp.currentSelectedUser];
+    cryptoApp.currentMsgArrayEnc = cryptoApp.allMsgEnc[cryptoApp.currentSelectedUser];
+  
+  })
 
-  cryptoApp.publicMsg.push({msg: (username+": "+a.decrypt(text)), state:'in'});
-
-}
+})
