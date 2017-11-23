@@ -36,9 +36,19 @@ io.on('connection',function(socket){
 
   /////////////////////////////
   // for private chat
-  socket.on('sendMsgTo',function(fromUsername, targetUsername, msg){
+  socket.on('sendMsgTo',function(fromUsername, targetUsername, cipherText, iv, sessionKey_encrypted){
+
+    console.log('------------------------------')
+    console.log('sendMsgTo info')
+    console.log(fromUsername)
+    console.log(targetUsername)
+    console.log(cipherText)
+    console.log(iv)
+    console.log(sessionKey_encrypted)
+    console.log('------------------------------')
+    
     io.to(allPeople[targetUsername].socketid)
-    .emit('sendMsgTo',fromUsername, msg)
+    .emit('sendMsgTo',fromUsername, cipherText, iv, sessionKey_encrypted)
   })
 
   //////////////////////////
@@ -50,7 +60,6 @@ io.on('connection',function(socket){
       publicKeySV: publicKeySV_buffer,      
     }
 
-    console.log(allPeople);
     // console.log(allPeople);
     socket.broadcast.emit('newUsername', username, publicKeyED_buffer, publicKeySV_buffer);
   })

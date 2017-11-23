@@ -1,15 +1,69 @@
 let socket = io();
 
 ////////////////////////
-socket.on('sendMsgTo',function(fromUsername, msgComming){
+socket.on('sendMsgTo',function(fromUsername, cipherText_cipherRSA, iv_cipherRSA, sessionKey_cipherRSA){
   
   if(!(cryptoApp.allMsg[fromUsername])) 
     cryptoApp.allMsg[fromUsername] = [];
   
+  if(!(cryptoApp.allMsgEnc[fromUsername])) 
+    cryptoApp.allMsgEnc[fromUsername] = [];
+
+  //may cause a problem later
   cryptoApp.currentSelectedUser = fromUsername;
+
+
   
+  console.log('i ve rececieved')
+  console.log(fromUsername)
+  console.log(cipherText_cipherRSA)
+  console.log(iv_cipherRSA)
+  console.log(sessionKey_cipherRSA);
+  
+
+  cryptoAPI_RSA.decrypt(cipherText_cipherRSA)
+  .then(function(cipherText){
+    cryptoAPI_RSA.decrypt(iv_cipherRSA)
+    .then(function(iv){
+      cryptoAPI_RSA.decrypt(sessionKey_cipherRSA)
+      .then(function(sessionKey){
+
+        console.log('rece session key',arrayBufferToString(sessionKey))
+        console.log('recv iv',arrayBufferToString(iv));
+        console.log('recv ciphertext', arrayBufferToString(cipherText));
+
+        cryptoApp.allMsgEnc[fromUsername].push({msg:arrayBufferToString(cipherText), state:'in'});
+        
+
+        let tmp_cryptoAES = new cryptoAPI('AES');
+        tmp_cryptoAES.importKey(sessionKey)
+        .then(function(_sessionKey){
+          
+          console.log('**cipher buffer*',cipherText.byteLength)
+          console.log('***',iv.byteLength);
+          console.log('***',_sessionKey)
+
+          let view = new Uint8Array(iv);
+          console.log('view ', view);
+          console.log('cipher ', new Uint8Array(cipherText));
+
+          tmp_cryptoAES.decrypt(cipherText, view)
+          .then(function(originalMsg){
+            
+            cryptoApp.allMsg[fromUsername].push({msg:arrayBufferToString(originalMsg), state:'in'});
+  
+          })
+
+        })
+
+
+      })
+    })
+  })
+
+
   //decryption //receive a msg
-  cryptoApp.allMsg[fromUsername].push({msg:msgComming, state:'in'});
+  // cryptoApp.allMsg[fromUsername].push({msg:msgComming, state:'in'});
 
 });
 
@@ -266,9 +320,59 @@ var cryptoApp = new Vue({
         cryptoApp.allMsg[cryptoApp.currentSelectedUser] = [];
 
       cryptoApp.allMsg[cryptoApp.currentSelectedUser].push({msg: this.realTimeMsg, state:'out'});
+      //encrypt and add to allmsgenc
+      /**/
+      console.log(typeof this.realTimeMsg);
+      console.log(this.realTimeMsg);
+      console.log(this.realTimeMsg.length);
+      let theMsg = this.realTimeMsg;
 
-      //send msg
-      socket.emit('sendMsgTo',cryptoApp.username, cryptoApp.currentSelectedUser, this.realTimeMsg)
+      cryptoAPI_AES.exportKey()
+      .then(function(sessionKey){
+
+        console.log('sent session key is:', arrayBufferToString(sessionKey));
+
+
+        cryptoAPI_AES.encrypt(stringToArrayBuffer(theMsg))
+        .then(function(cipherObject){
+          let cipherText = cipherObject.cipherText;
+          let iv = cipherObject.iv;
+          
+          console.log('sent cipher text', arrayBufferToString(cipherText));
+          console.log('sent iv',new Uint8Array(iv));
+
+          cryptoApp.allMsgEnc[cryptoApp.currentSelectedUser].push({msg: arrayBufferToString(cipherText),state:'out'})
+
+          let target_RSA = new cryptoAPI('RSA');
+          target_RSA.importKey(cryptoApp.allPeople[cryptoApp.currentSelectedUser].publicKeyED)
+          .then(function(publicKey){
+            target_RSA.encrypt(sessionKey)
+            .then(function(sessionKey_cipherRSA){
+              target_RSA.encrypt(cipherText)
+              .then(function(cipherText_cipherRSA){
+                target_RSA.encrypt(iv)
+                .then(function(iv_cipherRSA){
+
+                  socket.emit('sendMsgTo',
+                              cryptoApp.username,
+                              cryptoApp.currentSelectedUser,
+                              cipherText_cipherRSA,
+                              iv_cipherRSA,
+                              sessionKey_cipherRSA
+                            );
+
+                  console.log('sending done,okay relax');
+      
+                })
+              })
+            })
+          })
+        })
+      })
+      /* */
+      //send msg@@@
+      //encrypt the msg before sending
+      // socket.emit('sendMsgTo',cryptoApp.username, cryptoApp.currentSelectedUser, this.realTimeMsg)
 
 
       cryptoApp.realTimeMsg="";
@@ -279,6 +383,12 @@ var cryptoApp = new Vue({
 
   watch:{
     
+    currentMsgArray:function(){
+          
+    cryptoApp.currentMsgArray = cryptoApp.allMsg[cryptoApp.currentSelectedUser];
+    cryptoApp.currentMsgArrayEnc = cryptoApp.allMsgEnc[cryptoApp.currentSelectedUser];
+  
+    },
     currentMsgArray: function(){
 
       setTimeout(function () {

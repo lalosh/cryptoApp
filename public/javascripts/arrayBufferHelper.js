@@ -6,6 +6,7 @@ function arrayBufferToString(buf) {
    
 function stringToArrayBuffer(str) {
      
+    // console.log('ive got',str);
     var buf = new ArrayBuffer(str.length*2); // 2 bytes for each char
     var bufView = new Uint16Array(buf);
     
