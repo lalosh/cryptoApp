@@ -1,7 +1,7 @@
 let socket = io();
 
 ////////////////////////
-socket.on('sendMsgTo',function(fromUsername, cipherText_cipherRSA, iv_cipherRSA, sessionKey_cipherRSA){
+socket.on('sendMsgTo',function(fromUsername, cipherText_cipherRSA, iv_cipherRSA, sessionKey_cipherRSA, theSingature){
   
   if(!(cryptoApp.allMsg[fromUsername])) 
     cryptoApp.allMsg[fromUsername] = [];
@@ -50,6 +50,16 @@ socket.on('sendMsgTo',function(fromUsername, cipherText_cipherRSA, iv_cipherRSA,
           tmp_cryptoAES.decrypt(cipherText, view)
           .then(function(originalMsg){
             
+            let tmp_digSig = new digSigAPI();
+            tmp_digSig.importKey(cryptoApp.allPeople[fromUsername].publicKeySV)
+            .then(function(publicKeyForDG){
+
+              tmp_digSig.verify(theSingature,originalMsg)
+              .then(function(resultBoolean){
+                console.log('verify state: ',resultBoolean);
+              })
+            })
+
             cryptoApp.allMsg[fromUsername].push({msg:arrayBufferToString(originalMsg), state:'in'});
   
           })
@@ -121,10 +131,10 @@ Vue.component('loginForm', {
 
           //generate the keys for Digital Signature
           digSigAPI_SV.generateKey()
-          .then(function(keyPair){
+          .then(function(_keyPair){
             
-            cryptoApp.publicKeySV = keyPair.publicKey;
-            cryptoApp.privateKeySV = keyPair.privateKey;
+            cryptoApp.publicKeySV = _keyPair.publicKey;
+            cryptoApp.privateKeySV = _keyPair.privateKey;
 
             //send public key of DS
             digSigAPI_SV.exportKey()
@@ -353,13 +363,20 @@ var cryptoApp = new Vue({
                 target_RSA.encrypt(iv)
                 .then(function(iv_cipherRSA){
 
-                  socket.emit('sendMsgTo',
-                              cryptoApp.username,
-                              cryptoApp.currentSelectedUser,
-                              cipherText_cipherRSA,
-                              iv_cipherRSA,
-                              sessionKey_cipherRSA
-                            );
+                  digSigAPI_SV.sign(stringToArrayBuffer(theMsg))
+                  .then(function(theSingature){
+
+                    socket.emit('sendMsgTo',
+                    cryptoApp.username,
+                    cryptoApp.currentSelectedUser,
+                    cipherText_cipherRSA,
+                    iv_cipherRSA,
+                    sessionKey_cipherRSA,
+                    theSingature
+                    );
+
+                  })
+
 
                   console.log('sending done,okay relax');
       

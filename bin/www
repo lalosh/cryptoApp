@@ -36,7 +36,7 @@ io.on('connection',function(socket){
 
   /////////////////////////////
   // for private chat
-  socket.on('sendMsgTo',function(fromUsername, targetUsername, cipherText, iv, sessionKey_encrypted){
+  socket.on('sendMsgTo',function(fromUsername, targetUsername, cipherText, iv, sessionKey_encrypted, signature){
 
     console.log('------------------------------')
     console.log('sendMsgTo info')
@@ -48,7 +48,7 @@ io.on('connection',function(socket){
     console.log('------------------------------')
     
     io.to(allPeople[targetUsername].socketid)
-    .emit('sendMsgTo',fromUsername, cipherText, iv, sessionKey_encrypted)
+    .emit('sendMsgTo',fromUsername, cipherText, iv, sessionKey_encrypted, signature)
   })
 
   //////////////////////////
