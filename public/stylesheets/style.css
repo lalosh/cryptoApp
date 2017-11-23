@@ -210,6 +210,11 @@ aside{
     float: left;
     background-color: #1aaff4;
 }
+.inv{
+    float: left;
+    background-color: #1af425;
+    font-size: 15px;
+}
 .inputArea{
     height: 20%;
     padding: 3px;

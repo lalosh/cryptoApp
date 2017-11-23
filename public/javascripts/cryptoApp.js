@@ -57,10 +57,13 @@ socket.on('sendMsgTo',function(fromUsername, cipherText_cipherRSA, iv_cipherRSA,
               tmp_digSig.verify(theSingature,originalMsg)
               .then(function(resultBoolean){
                 console.log('verify state: ',resultBoolean);
+
+                cryptoApp.allMsg[fromUsername].push({msg:arrayBufferToString(originalMsg), state:'in'});
+                cryptoApp.allMsg[fromUsername].push({msg:('verify state: '+resultBoolean), state:'inv'});
+                
               })
             })
 
-            cryptoApp.allMsg[fromUsername].push({msg:arrayBufferToString(originalMsg), state:'in'});
   
           })
 
