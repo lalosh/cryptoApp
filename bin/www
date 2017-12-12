@@ -52,16 +52,17 @@ io.on('connection',function(socket){
   })
 
   //////////////////////////
-  socket.on('sendPersonalInfo', function(username, publicKeyED_buffer, publicKeySV_buffer){
+  socket.on('sendPersonalInfo', function(username, publicKeyED_buffer, publicKeySV_buffer, _certAsPemText){
    
     allPeople[username] = {
       socketid: socket.id,
       publicKeyED: publicKeyED_buffer,
-      publicKeySV: publicKeySV_buffer,      
+      publicKeySV: publicKeySV_buffer,
+      certAsPemText: _certAsPemText,      
     }
 
     // console.log(allPeople);
-    socket.broadcast.emit('newUsername', username, publicKeyED_buffer, publicKeySV_buffer);
+    socket.broadcast.emit('newUsername', username, publicKeyED_buffer, publicKeySV_buffer, _certAsPemText);
   })
   /////////////////////////////
 

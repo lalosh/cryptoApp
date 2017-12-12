@@ -75,6 +75,19 @@ h3{
     border-radius: 3px;
 }
 
+#my-cert{
+    text-align:center;
+    padding: 5px 0;
+    font-size: 22px;
+    background-color: #129bc4;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    margin: 10px auto;
+    display: block;
+    width: 50%;
+}
+
 aside{
   width: 28%;
   display: inline-block;

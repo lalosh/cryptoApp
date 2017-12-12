@@ -81,8 +81,8 @@ socket.on('sendMsgTo',function(fromUsername, cipherText_cipherRSA, iv_cipherRSA,
 });
 
 ///////////////////////
-socket.on('newUsername',function(username, publicKeyED_buffer, publicKeySV_buffer){
-    addOnlinePerson(username, publicKeyED_buffer, publicKeySV_buffer);
+socket.on('newUsername',function(username, publicKeyED_buffer, publicKeySV_buffer, certAsPemText){
+    addOnlinePerson(username, publicKeyED_buffer, publicKeySV_buffer, certAsPemText);
 });
 ///////////////////////
 
@@ -108,6 +108,7 @@ Vue.component('loginForm', {
   <div class="loginForm" v-else>
 
     <p>Hello,{{username}}!  </p>
+    <a id="my-cert" download="certificate.pem">My Cert</a>
 
   </div>
   `,
@@ -142,8 +143,23 @@ Vue.component('loginForm', {
             //send public key of DS
             digSigAPI_SV.exportKey()
             .then(function(publicKeySV_buffer){
-            
-              socket.emit('sendPersonalInfo', cryptoApp.username, publicKeyED_buffer,publicKeySV_buffer);
+              
+              // commonName, _organization, _organizationUnit, _countryCode
+              digSigAPI_SV.createCertificate(cryptoApp.username, cryptoApp.username+"_ORG", cryptoApp.username+"_ORG_UNIT", "EN", _keyPair)
+
+              .then(function(certInfo){
+
+                // console.log('your cert is: ');
+                // console.log(certInfo.certAsPemText);
+                cryptoApp.certAsPemText = certInfo.certAsPemText;
+
+                let cert_url = "data:application/octet-stream;charset=UTF-8;base64," + btoa(cryptoApp.certAsPemText); 
+                document.getElementById('my-cert').setAttribute('href',cert_url);
+
+                socket.emit('sendPersonalInfo', cryptoApp.username, publicKeyED_buffer,publicKeySV_buffer, certInfo.certAsPemText);
+                
+              })
+
             })
 
           })
@@ -176,11 +192,12 @@ Vue.component('people',{
 
       <div class="person" v-for="i in peopleArray" :key="i.id">
           <h3>{{i.name}}</h3>
-          <span>is typing...</span>
+          <a id="people-cert" download="cert.pem" v-bind:href=i.cert> cert </a>
       </div>
 
   </div>
   `,
+
 })
 
 
@@ -277,6 +294,8 @@ var cryptoApp = new Vue({
     publicKeySV: '',
     privateKeySV: '',
     
+    certAsPemText: '',
+
     //session key by AES
     sessionKey: '',
 
@@ -441,13 +460,16 @@ var cryptoApp = new Vue({
 
 //io
 //////////////////////////
-function addOnlinePerson(personName, publicKeyED_buffer, publicKeySV_buffer){
+function addOnlinePerson(personName, publicKeyED_buffer, publicKeySV_buffer, _certAsPemText){
 
   let newId = cryptoApp.peopleArray.length;
 
+  let cert_url = "data:application/octet-stream;charset=UTF-8;base64," + btoa(_certAsPemText);
+
   let newPerson = {
     id: newId,
-    name: personName
+    name: personName,
+    cert: cert_url
   };
 
   cryptoApp.peopleArray.push(newPerson);
@@ -456,8 +478,11 @@ function addOnlinePerson(personName, publicKeyED_buffer, publicKeySV_buffer){
   cryptoApp.allPeople[personName] = {
     publicKeyED: publicKeyED_buffer,
     publicKeySV: publicKeySV_buffer,
+    certAsPemText: _certAsPemText,
   };
 
+  console.log(personName + "has this cert: ");
+  console.log(_certAsPemText);
 }
 //////////////////////////////
 
