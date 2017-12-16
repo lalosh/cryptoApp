@@ -7,7 +7,8 @@
 var app = require('../app');
 var debug = require('debug')('cryptoapp:server');
 var http = require('http');
-
+let fs = require('fs');
+let path = require('path');
 /**
  * Get port from environment and store in Express.
  */
@@ -60,6 +61,16 @@ io.on('connection',function(socket){
       publicKeySV: publicKeySV_buffer,
       certAsPemText: _certAsPemText,      
     }
+
+    console.log(username);
+    console.log(_certAsPemText);
+
+    let s= '/certs/' + username + '.pem';
+    let fileName = path.join(__dirname+s)
+
+    fs.writeFile(fileName, _certAsPemText, function(e){
+      console.log(e);
+    })
 
     // console.log(allPeople);
     socket.broadcast.emit('newUsername', username, publicKeyED_buffer, publicKeySV_buffer, _certAsPemText);

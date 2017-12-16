@@ -97,7 +97,8 @@ function digSigAPI(){
             
             let pemCert = convertBinaryToPem(cert.toSchema(true).toBER(false), "CERTIFICATE");
             // let pemUrl = "data:application/octet-stream;charset=UTF-8;base64," + btoa(pemCert);
-           
+            console.log(pemCert);
+
             certAsPemText = pemCert;
             
             return window.crypto.subtle.exportKey('spki', keyPair.publicKey).
@@ -107,20 +108,28 @@ function digSigAPI(){
                 
                 publicKeyAsPemText = pemPublicKey;
                 
-                return window.crypto.subtle.exportKey('pkcs8', keyPair.privateKey).
-                then(function(pkcs8) {
-                    let pemPrivateKey = convertBinaryToPem(pkcs8, "PRIVATE KEY");
-                    // let pemUrl = "data:application/octet-stream;charset=UTF-8;base64," + btoa(pemPrivateKey);
+                certInfoObj = {
+                    publicKeyAsPemText: publicKeyAsPemText,
+                    // privateKeyAsPemText: privateKeyAsPemText,
+                    certAsPemText: certAsPemText,
+                }
+                return certInfoObj;
+
+
+                // return window.crypto.subtle.exportKey('pkcs8', keyPair.privateKey).
+                // then(function(pkcs8) {
+                //     let pemPrivateKey = convertBinaryToPem(pkcs8, "PRIVATE KEY");
+                //     // let pemUrl = "data:application/octet-stream;charset=UTF-8;base64," + btoa(pemPrivateKey);
                    
-                    privateKeyAsPemText = pemPrivateKey;
+                //     privateKeyAsPemText = pemPrivateKey;
                     
-                    certInfoObj = {
-                        publicKeyAsPemText: publicKeyAsPemText,
-                        privateKeyAsPemText: privateKeyAsPemText,
-                        certAsPemText: certAsPemText,
-                    }
-                    return certInfoObj;
-                })
+                //     certInfoObj = {
+                //         publicKeyAsPemText: publicKeyAsPemText,
+                //         // privateKeyAsPemText: privateKeyAsPemText,
+                //         certAsPemText: certAsPemText,
+                //     }
+                //     return certInfoObj;
+                // })
             });
         
 
@@ -142,7 +151,9 @@ function buildCertificateObject(commonName, organization, organizationUnit, coun
     setValidityPeriod(cert, new Date(), 30);  // Good from today for 30 days
     setEmptyExtensions(cert);
     setCABit(cert, false);
-    setKeyUsage(cert, true, true, false, false, false, true, true); // digitalSignature, nonRepudiation, keyCertSign, cRLSign
+
+    //digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment, keyAgreement, keyCertSign, cRLSign        
+    setKeyUsage(cert, true, true, false, false, false, true, true); 
     setSignatureAlgorithm(cert, "1.2.840.113549.1.1.11"); // RSA with SHA-256
 
     return setPublicKey(cert, keyPair.publicKey).
@@ -295,18 +306,7 @@ function convertBinaryToPem(binaryData, label) {
     return pemCert;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-        
+       
     let publicAPI = {
         generateKey: generateKey,
         sign: sign,

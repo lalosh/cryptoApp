@@ -302,7 +302,7 @@ var cryptoApp = new Vue({
     //current selected user to send msg to
     currentSelectedUser: '',
 
-    //only for names
+    //only for names+certs
     peopleArray:[
     ],
     
@@ -313,7 +313,7 @@ var cryptoApp = new Vue({
     username:'',
 
     currentMsgArray:[
-      {msg:'how are you?',state:'out'}
+      {msg:'choose one of the online users on the left',state:'out'}
     ],
     currentMsgArrayEnc:[
 
