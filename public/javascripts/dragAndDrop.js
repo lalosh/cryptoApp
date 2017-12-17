@@ -1,18 +1,11 @@
 let drop_handler,dragover_handler,dragend_handler;
 
-
 $(document).ready(function(){
   
-  
-    console.log('jQuery is running...');
-  
     /*drag and drop file*/
-    // console.log('hello from drag and drop script');
-    // var enc = new TextDecoder();
   
     drop_handler=function (ev) {
   
-      // console.log("Drop");
       ev.preventDefault();
   
       let filesArray = [];
@@ -23,61 +16,78 @@ $(document).ready(function(){
         for (var i=0; i < dt.items.length; i++)
           if (dt.items[i].kind == "file") {
   
-            var f = dt.items[i].getAsFile();
-  
-            /**/
+            var file = dt.items[i].getAsFile();
   
             let reader = new FileReader();
-            reader.readAsText(f);
+            reader.readAsText(file);
   
             setTimeout(function () {
-  
-              // console.log(reader.result);
-              // console.log(typeof reader.result);
-  
-              //io send file //io recv file is the same
-              // cryptoApp.allMsg[cryptoApp.currentSelectedUser].push({msg:reader.result, state:'out'});
-  
-              if(!(cryptoApp.allMsg[cryptoApp.currentSelectedUser]))
-                cryptoApp.allMsg[cryptoApp.currentSelectedUser] = [];
-              
-              cryptoApp.allMsg[cryptoApp.currentSelectedUser].push({msg: reader.result, state:'out'});
+            
+            if(!(cryptoApp.allMsg[cryptoApp.currentSelectedUser]))
+            cryptoApp.allMsg[cryptoApp.currentSelectedUser] = [];
+            
+            cryptoApp.allMsg[cryptoApp.currentSelectedUser].push({msg: reader.result, state:'out'});
+    
+            cryptoAPI_AES.exportKey()
+            .then(function(sessionKey){
       
-  
-              // console.log(typeof reader.result);
-              // let symCryptoInstance = new symCrypto();
-              // symCryptoInstance.changePassword(cryptoApp.secretKey);
-              // let res = symCryptoInstance.encrypt(reader.result);
-  
-              // cryptoApp.publicMsgEnc.push({msg:res, state:'out'});
-              //send io the 'res'
-              socket.emit('sendMsgTo',cryptoApp.username, cryptoApp.currentSelectedUser, reader.result);
-              
-            }, 1000);
-  
-            /**/
-            filesArray.push(f);
-            // console.log(" file[" + i + "].name = " + f.name);
-            }
-  
-      // Use DataTransfer interface to access the file(s)
-       else
-            for (var i=0; i < dt.files.length; i++) {
-              // console.log(" file[" + i + "].name = " + dt.files[i].name);
-            }
-  
+              cryptoAPI_AES.encrypt(stringToArrayBuffer(reader.result))
+              .then(function(cipherObject){
+
+                let cipherText = cipherObject.cipherText;
+                let iv = cipherObject.iv;
+      
+                cryptoApp.allMsgEnc[cryptoApp.currentSelectedUser].push({msg: arrayBufferToString(cipherText),state:'out'})
+      
+                let target_RSA = new cryptoAPI('RSA');
+
+                target_RSA.importKey(cryptoApp.allPeople[cryptoApp.currentSelectedUser].publicKeyED)
+                .then(function(publicKey){
+
+                  target_RSA.encrypt(sessionKey)
+                  .then(function(sessionKey_cipherRSA){
+
+                    target_RSA.encrypt(cipherText)
+                    .then(function(cipherText_cipherRSA){
+
+                      target_RSA.encrypt(iv)
+                      .then(function(iv_cipherRSA){
+      
+                        digSigAPI_SV.sign(stringToArrayBuffer(reader.result))
+                        .then(function(theSingature){
+      
+                          socket.emit('sendMsgTo',
+                          cryptoApp.username,
+                          cryptoApp.currentSelectedUser,
+                          cipherText_cipherRSA,
+                          iv_cipherRSA,
+                          sessionKey_cipherRSA,
+                          theSingature
+                          );
+      
+                        })
+                      })
+                    })
+                  })
+                })
+              })
+            })
+          },2000);
+            
+ 
+            filesArray.push(file);
     }
+  
+  }
   
     dragover_handler=function (ev) {
   
-      // console.log("dragOver");
       // Prevent default select and drag behavior
       ev.preventDefault();
     }
   
     dragend_handler = function dragend_handler(ev) {
   
-      // console.log("dragEnd");
       // Remove all of the drag data
       var dt = ev.dataTransfer;
   
@@ -90,10 +100,6 @@ $(document).ready(function(){
       else
         // Use DataTransfer interface to remove the drag data
         ev.dataTransfer.clearData();
-  
     }
     /*drag and drop file*/
-  
   });
-  
-  

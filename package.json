@@ -1,6 +1,6 @@
 {
   "name": "cryptoapp",
-  "version": "0.0.1",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
     "start": "nodemon ./bin/www"
@@ -12,7 +12,6 @@
     "express": "~4.15.5",
     "morgan": "~1.9.0",
     "nodemon": "^1.12.1",
-    "pug": "2.0.0-beta11",
     "serve-favicon": "~2.4.5",
     "socket.io": "^2.0.4"
   }

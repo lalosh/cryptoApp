@@ -96,51 +96,27 @@ function digSigAPI(){
         .then(function(cert) {
             
             let pemCert = convertBinaryToPem(cert.toSchema(true).toBER(false), "CERTIFICATE");
-            // let pemUrl = "data:application/octet-stream;charset=UTF-8;base64," + btoa(pemCert);
-            console.log(pemCert);
 
             certAsPemText = pemCert;
             
             return window.crypto.subtle.exportKey('spki', keyPair.publicKey).
             then(function(spki) {
                 let pemPublicKey = convertBinaryToPem(spki, "PUBLIC KEY");
-                // let pemUrl = "data:application/octet-stream;charset=UTF-8;base64," + btoa(pemPublicKey);
                 
                 publicKeyAsPemText = pemPublicKey;
                 
                 certInfoObj = {
                     publicKeyAsPemText: publicKeyAsPemText,
-                    // privateKeyAsPemText: privateKeyAsPemText,
                     certAsPemText: certAsPemText,
                 }
                 return certInfoObj;
 
-
-                // return window.crypto.subtle.exportKey('pkcs8', keyPair.privateKey).
-                // then(function(pkcs8) {
-                //     let pemPrivateKey = convertBinaryToPem(pkcs8, "PRIVATE KEY");
-                //     // let pemUrl = "data:application/octet-stream;charset=UTF-8;base64," + btoa(pemPrivateKey);
-                   
-                //     privateKeyAsPemText = pemPrivateKey;
-                    
-                //     certInfoObj = {
-                //         publicKeyAsPemText: publicKeyAsPemText,
-                //         // privateKeyAsPemText: privateKeyAsPemText,
-                //         certAsPemText: certAsPemText,
-                //     }
-                //     return certInfoObj;
-                // })
             });
-        
-
         })
 
     }
 
-
-
-
-
+    
 // Returns a Promise yielding the certificate object
 function buildCertificateObject(commonName, organization, organizationUnit, countryCode, keyPair) {
     var cert = new org.pkijs.simpl.CERT();

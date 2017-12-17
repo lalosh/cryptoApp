@@ -1,6 +1,7 @@
 let socket = io();
 
-////////////////////////
+////////////////////////////////////////////////////////////
+
 socket.on('sendMsgTo',function(fromUsername, cipherText_cipherRSA, iv_cipherRSA, sessionKey_cipherRSA, theSingature){
   
   if(!(cryptoApp.allMsg[fromUsername])) 
@@ -13,78 +14,54 @@ socket.on('sendMsgTo',function(fromUsername, cipherText_cipherRSA, iv_cipherRSA,
   cryptoApp.currentSelectedUser = fromUsername;
 
 
-  
-  console.log('i ve rececieved')
-  console.log(fromUsername)
-  console.log(cipherText_cipherRSA)
-  console.log(iv_cipherRSA)
-  console.log(sessionKey_cipherRSA);
-  
-
   cryptoAPI_RSA.decrypt(cipherText_cipherRSA)
   .then(function(cipherText){
+
     cryptoAPI_RSA.decrypt(iv_cipherRSA)
     .then(function(iv){
+
       cryptoAPI_RSA.decrypt(sessionKey_cipherRSA)
       .then(function(sessionKey){
 
-        console.log('rece session key',arrayBufferToString(sessionKey))
-        console.log('recv iv',arrayBufferToString(iv));
-        console.log('recv ciphertext', arrayBufferToString(cipherText));
-
         cryptoApp.allMsgEnc[fromUsername].push({msg:arrayBufferToString(cipherText), state:'in'});
-        
 
         let tmp_cryptoAES = new cryptoAPI('AES');
+
         tmp_cryptoAES.importKey(sessionKey)
         .then(function(_sessionKey){
-          
-          console.log('**cipher buffer*',cipherText.byteLength)
-          console.log('***',iv.byteLength);
-          console.log('***',_sessionKey)
 
           let view = new Uint8Array(iv);
-          console.log('view ', view);
-          console.log('cipher ', new Uint8Array(cipherText));
 
           tmp_cryptoAES.decrypt(cipherText, view)
           .then(function(originalMsg){
             
             let tmp_digSig = new digSigAPI();
+
             tmp_digSig.importKey(cryptoApp.allPeople[fromUsername].publicKeySV)
             .then(function(publicKeyForDG){
 
               tmp_digSig.verify(theSingature,originalMsg)
               .then(function(resultBoolean){
-                console.log('verify state: ',resultBoolean);
 
                 cryptoApp.allMsg[fromUsername].push({msg:arrayBufferToString(originalMsg), state:'in'});
                 cryptoApp.allMsg[fromUsername].push({msg:('verify state: '+resultBoolean), state:'inv'});
                 
               })
             })
-
-  
           })
-
         })
-
-
       })
     })
   })
 
-
-  //decryption //receive a msg
-  // cryptoApp.allMsg[fromUsername].push({msg:msgComming, state:'in'});
-
 });
 
-///////////////////////
+/////////////////////////////////////////////////////////////
+
 socket.on('newUsername',function(username, publicKeyED_buffer, publicKeySV_buffer, certAsPemText){
-    addOnlinePerson(username, publicKeyED_buffer, publicKeySV_buffer, certAsPemText);
+   
+  addOnlinePerson(username, publicKeyED_buffer, publicKeySV_buffer, certAsPemText);
 });
-///////////////////////
 
 //////////////////////////////////////////////////////////////
 
@@ -108,24 +85,29 @@ Vue.component('loginForm', {
   <div class="loginForm" v-else>
 
     <p>Hello,{{username}}!  </p>
-    <a id="my-cert" download="certificate.pem">My Cert</a>
+    <a id="my-cert" download="certificate.pem">My Certificate</a>
 
   </div>
   `,
 
   methods:{
+    
     changeUserName: function(){
+     
       cryptoApp.username = $('.loginForm :input').val();
 
       //generate the key for AES
       cryptoAPI_AES.generateKey()
       .then(function(sessionKey){
+        
         cryptoApp.sessionKey = sessionKey;
       })
 
       //generate the keys for RSA and DS  
       cryptoAPI_RSA.generateKey()
+     
       .then(function(keyPair){
+     
         cryptoApp.publicKeyED = keyPair.publicKey;
         cryptoApp.privateKeyED = keyPair.privateKey;
 
@@ -146,37 +128,26 @@ Vue.component('loginForm', {
               
               // commonName, _organization, _organizationUnit, _countryCode
               digSigAPI_SV.createCertificate(cryptoApp.username, cryptoApp.username+"_ORG", cryptoApp.username+"_ORG_UNIT", "EN", _keyPair)
-
               .then(function(certInfo){
 
-                // console.log('your cert is: ');
-                // console.log(certInfo.certAsPemText);
                 cryptoApp.certAsPemText = certInfo.certAsPemText;
 
                 let cert_url = "data:application/octet-stream;charset=UTF-8;base64," + btoa(cryptoApp.certAsPemText); 
                 document.getElementById('my-cert').setAttribute('href',cert_url);
 
-                socket.emit('sendPersonalInfo', cryptoApp.username, publicKeyED_buffer,publicKeySV_buffer, certInfo.certAsPemText);
+                socket.emit('sendPersonalInfo',
+                              cryptoApp.username,
+                              publicKeyED_buffer,
+                              publicKeySV_buffer,
+                              certInfo.certAsPemText
+                            );
                 
               })
-
             })
-
           })
         })
       })
       
-
-      //tests
-      setTimeout(() => {
-        console.log('generating keys done!')
-        // console.log(cryptoApp.sessionKey)
-        // console.log(cryptoApp.publicKeyED)
-        // console.log(cryptoApp.privateKeyED)
-        // console.log(cryptoApp.publicKeySV)
-        // console.log(cryptoApp.privateKeySV)    
-      }, 1000);
-
     }
   }
 
@@ -192,7 +163,7 @@ Vue.component('people',{
 
       <div class="person" v-for="i in peopleArray" :key="i.id">
           <h3>{{i.name}}</h3>
-          <a id="people-cert" download="cert.pem" v-bind:href=i.cert> cert </a>
+          <a id="people-cert" download="cert.pem" v-bind:href=i.cert> certificate </a>
       </div>
 
   </div>
@@ -236,6 +207,7 @@ Vue.component('chatBoxEnc',{
 
 })
 
+
 Vue.component('chatBox',{
 
   props:['value','publicMsg'],
@@ -250,7 +222,7 @@ Vue.component('chatBox',{
     </div>
 
     <div class="inputArea">
-        <input type="text" @keyup.enter="sendMsg" :value="value" @input="$emit('input',$event.target.value)">
+        <input type="text" placeholder="type you message here" @keyup.enter="sendMsg" :value="value" @input="$emit('input',$event.target.value)">
         <button @click="sendMsg">send</button>
     </div>
 
@@ -270,11 +242,10 @@ Vue.component('fileArea',{
 
   template:`
   <div class="fileArea" id="drop_zone" ondrop="drop_handler(event);" ondragover="dragover_handler(event);" ondragend="dragend_handler(event);">
-    <strong>Drag one or more files to this Drop Zone ...</strong>
+    <strong>Drag one or more text files to this Drop Zone ...</strong>
   </div>
   `
 })
-
 
 
 var cryptoApp = new Vue({
@@ -340,29 +311,21 @@ var cryptoApp = new Vue({
   </div>
   `,
 
-
   methods:{
     sendMsg: function(){
 
       if(!(cryptoApp.currentSelectedUser)) return;
-
-      console.log('send button clicked!!')
       
       if(!(cryptoApp.allMsg[cryptoApp.currentSelectedUser]))
         cryptoApp.allMsg[cryptoApp.currentSelectedUser] = [];
 
       cryptoApp.allMsg[cryptoApp.currentSelectedUser].push({msg: this.realTimeMsg, state:'out'});
-      //encrypt and add to allmsgenc
-      /**/
-      console.log(typeof this.realTimeMsg);
-      console.log(this.realTimeMsg);
-      console.log(this.realTimeMsg.length);
+
+      //encrypt and add to allMsgEnc
       let theMsg = this.realTimeMsg;
 
       cryptoAPI_AES.exportKey()
       .then(function(sessionKey){
-
-        console.log('sent session key is:', arrayBufferToString(sessionKey));
 
 
         cryptoAPI_AES.encrypt(stringToArrayBuffer(theMsg))
@@ -370,18 +333,20 @@ var cryptoApp = new Vue({
           let cipherText = cipherObject.cipherText;
           let iv = cipherObject.iv;
           
-          console.log('sent cipher text', arrayBufferToString(cipherText));
-          console.log('sent iv',new Uint8Array(iv));
 
           cryptoApp.allMsgEnc[cryptoApp.currentSelectedUser].push({msg: arrayBufferToString(cipherText),state:'out'})
 
           let target_RSA = new cryptoAPI('RSA');
+
           target_RSA.importKey(cryptoApp.allPeople[cryptoApp.currentSelectedUser].publicKeyED)
           .then(function(publicKey){
+
             target_RSA.encrypt(sessionKey)
             .then(function(sessionKey_cipherRSA){
+
               target_RSA.encrypt(cipherText)
               .then(function(cipherText_cipherRSA){
+
                 target_RSA.encrypt(iv)
                 .then(function(iv_cipherRSA){
 
@@ -399,19 +364,12 @@ var cryptoApp = new Vue({
 
                   })
 
-
-                  console.log('sending done,okay relax');
-      
                 })
               })
             })
           })
         })
       })
-      /* */
-      //send msg@@@
-      //encrypt the msg before sending
-      // socket.emit('sendMsgTo',cryptoApp.username, cryptoApp.currentSelectedUser, this.realTimeMsg)
 
 
       cryptoApp.realTimeMsg="";
@@ -456,10 +414,8 @@ var cryptoApp = new Vue({
 
 })
 
+////////////////////////////////////////////////////////////
 
-
-//io
-//////////////////////////
 function addOnlinePerson(personName, publicKeyED_buffer, publicKeySV_buffer, _certAsPemText){
 
   let newId = cryptoApp.peopleArray.length;
@@ -481,11 +437,9 @@ function addOnlinePerson(personName, publicKeyED_buffer, publicKeySV_buffer, _ce
     certAsPemText: _certAsPemText,
   };
 
-  console.log(personName + "has this cert: ");
-  console.log(_certAsPemText);
 }
-//////////////////////////////
 
+////////////////////////////////////////////////////////
 
 $(document).ready(function(){
 
@@ -493,6 +447,16 @@ $(document).ready(function(){
   $('.people').click(function(event){
 
     cryptoApp.currentSelectedUser = $(event.target).text();
+
+    $('.person').css('background-color','transparent');
+    $('.person h3').css('background-color','transparent');
+    $('.person a').css('background-color','transparent');
+    
+    if($(event.target)[0].nodeName == 'DIV')
+      $($(event.target)[0]).css('background-color','crimson');
+    else
+      $($(event.target).parent()[0]).css('background-color','crimson');
+    
 
     if(!(cryptoApp.allMsg[cryptoApp.currentSelectedUser])) 
       cryptoApp.allMsg[cryptoApp.currentSelectedUser]=[];

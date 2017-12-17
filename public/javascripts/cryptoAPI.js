@@ -154,8 +154,6 @@ function cryptoAPI(algoUsed){
 
     function decrypt(buffer, initVect){
 
-        console.log('decrypt$',new Uint8Array(buffer));
-        console.log('decrypt$',initVect);
         
         if(algoUsed === 'AES')
             return window.crypto.subtle.decrypt(
