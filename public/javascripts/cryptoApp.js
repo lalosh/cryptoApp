@@ -77,7 +77,7 @@ Vue.component('loginForm', {
   template:`
   <div v-if="!username" class="loginForm">
 
-      <input type="text" v-on:keyup.enter="changeUserName">
+      <input type="text" placeholder="type username" v-on:keyup.enter="changeUserName">
       <button v-on:click="changeUserName">log in</button>
 
   </div>
