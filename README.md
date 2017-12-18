@@ -41,26 +41,26 @@ This app has been built in four stages:
 ## 1-Symmetric Encryption
 
     Overview:    
-    use the secret key to encrypt a message before send and use it again to decrypt a message 
+        Use the secret key to encrypt a message before send and use it again to decrypt a message 
     when received
          
     Use web-crypto-api to generate one secret key per user and use it to encrypt each message
     the user has typed in showing the result as soon as the user hit the send button.
+
+    input: the message(as an array buffer)
+    output: the encrypted message(cipher text) + Initialization vector(iv)
     
     Info:
     Alogorithm used: AES-CBC
-    key length: 128 bit
-    
-    input: the message(as an array buffer)
-    output: the encrypted message(cipher text) + Initialization vector(iv)
+    key length: 128 bit    
 
     Why AES use the iv?
-    First AES initialize iv with random values for each encryption process and use this iv with
+        First AES initialize iv with random values for each encryption process and use this iv with
     the message to get the cipher text.
     then you have to attach the iv with each encrypted message to decrypt it later on.
    
     How do you know iv is really fully random and protectful?
-    if you send two identical messages you will have two totally different cipher text
+        If you send two identical messages you will have two totally different cipher text
     which make it really hard even for `Crypto Analysis` to deduce what has been send
     and received between you and the one who are you talking with.
 
@@ -68,10 +68,11 @@ This app has been built in four stages:
 ## 2-Asymmetric Encryption
     
     Overview:
-    use the public key of a receiver to encrypt the specific message sent to him/her 
+        Use the public key of a receiver to encrypt the specific message sent to him/her 
     and then on the receiver browser window use his/her own private key to decrypt the message
 
-    Use web-crypto-api to genereate one key pair(public key + private key) per user thus
+    Implementation:
+        Use web-crypto-api to genereate one key pair(public key + private key) per user thus
     the public key is sent to the server and everyone online and the private key is kept
     inside the user browser.
 
@@ -85,11 +86,12 @@ This app has been built in four stages:
 ## 3-Digital Signature
 
     Overview:
-    use the private key of a sender to sign the message sent and use the public key of the
+        Use the private key of a sender to sign the message sent and use the public key of the
     sender on the receiver browser window to verify the message is kept save(message integrity)
     and it was really sent from him/her(Non-repudiation)
 
-    Use web-crypto-api to genereate one key pair(public key + private key) per user thus the
+    Implementation:
+        Use web-crypto-api to genereate one key pair(public key + private key) per user thus the
     public key is sent to the server and everyone online and the private key is kept inside
     the user browser.
     
@@ -102,16 +104,17 @@ This app has been built in four stages:
 ## 4-Digital Certificate
 
     Overview:
-    Validity is an important for public keys transfered over the network and information
+        Validity is important for public keys transfered over the network and information
     concerning each public key is a crucial goal and so we create a certificate
-    (similar to each person ID card) which include each user Common Name,Orgainzation
+    (similar to every personal ID card) which include each user Publick Key,Common Name,Orgainzation
     and Country Code and we make it availabe for one complete month starting at the time
     the certificate was genereated in.
 
-    While it's still an app for testing and learning we used self-certificate which means
+    Implementation:
+        While it's still an app for testing and learning we used **self-certificate** which means
     each user create his own certificate(which should have been on the server not the client's browser)
     which include all the information that a certificate need with the public key included ofcourse
-    and he/she sign it with his/her private key then sent it to the server and anyone connected.
+    and he/she sign it with his/her private key then sent it to the server and everyone connected.
 
     Info:
     Certificate format: X.509
