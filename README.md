@@ -1,6 +1,4 @@
-<div dir="rtl" style="display:block;max-width:90%;margin:10px auto;font-size:40px;">
- يَسْتَخْفُونَ مِنَ النَّاسِ وَلَا يَسْتَخْفُونَ مِنَ اللَّهِ وَهُوَ مَعَهُمْ إِذْ يُبَيِّتُونَ مَا لَا يَرْضَىٰ مِنَ الْقَوْلِ ۚ وَكَانَ اللَّهُ بِمَا يَعْمَلُونَ مُحِيطًا
-</div>
+# يَسْتَخْفُونَ مِنَ النَّاسِ وَلَا يَسْتَخْفُونَ مِنَ اللَّهِ وَهُوَ مَعَهُمْ إِذْ يُبَيِّتُونَ مَا لَا يَرْضَىٰ مِنَ الْقَوْلِ ۚ وَكَانَ اللَّهُ بِمَا يَعْمَلُونَ مُحِيطًا
 
 # cryptoApp
 Private chat app that use Web-Crypto-API in Browser
@@ -118,6 +116,4 @@ npm start
 <img src="./screenshots/3.png">
 <img src="./screenshots/4.png">
 
-<div dir="rtl" style="display:block;max-width:40%;margin:0 auto;font-size:40px;">
-والحمد للّه ربّ العالمين
-</div>
+# والحمد للّه ربّ العالمين
