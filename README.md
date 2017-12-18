@@ -123,6 +123,10 @@ This app has been built in four stages:
 ## To Run it:
 
 ```sh
+
+#install dependencies
+dnf install git nodejs
+
 #download it
 git clone https://github.com/lalosh/cryptoApp.git
 
